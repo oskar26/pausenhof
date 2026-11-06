@@ -39,6 +39,10 @@ function tone(freq, start, dur, { type = 'sine', gain = 0.3, slide = 0, attack =
   o.start(t0); o.stop(t0 + dur + 0.02);
 }
 
+// Ringglocke (Boxkampf): unharmonische Teiltöne mit langem Ausklang
+function bell(start) {
+  [[830, 0.22], [1660 * 1.02, 0.1], [2490 * 0.97, 0.06], [3320 * 1.05, 0.035]].forEach(([f, g]) => tone(f, start, 1.1, { type: 'sine', gain: g, attack: 0.002 }));
+}
 const SOUNDS = {
   click() { tone(660, 0, 0.06, { type: 'triangle', gain: 0.15 }); },
   pop() { tone(420, 0, 0.09, { type: 'sine', gain: 0.3, slide: 500 }); },
@@ -48,7 +52,7 @@ const SOUNDS = {
   myGuess() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.06, 0.22, { type: 'triangle', gain: 0.22 })); },
   close() { tone(880, 0, 0.08, { type: 'square', gain: 0.07 }); tone(880, 0.12, 0.08, { type: 'square', gain: 0.07 }); },
   turn() { tone(392, 0, 0.14, { type: 'sawtooth', gain: 0.08 }); tone(587, 0.12, 0.25, { type: 'triangle', gain: 0.2 }); },
-  round() { [392, 523, 659].forEach((f, i) => tone(f, i * 0.12, 0.3, { type: 'triangle', gain: 0.18 })); },
+  round() { bell(0); bell(0.32); },
   tick() { tone(1200, 0, 0.04, { type: 'square', gain: 0.06 }); },
   reveal() { tone(659, 0, 0.18, { type: 'triangle', gain: 0.2 }); tone(523, 0.16, 0.18, { type: 'triangle', gain: 0.2 }); tone(392, 0.32, 0.35, { type: 'triangle', gain: 0.2 }); },
   like() { tone(700, 0, 0.1, { type: 'sine', gain: 0.25, slide: 400 }); },

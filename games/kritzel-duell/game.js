@@ -5,6 +5,7 @@ import { Room } from '../../shared/net.js';
 import { AVATARS, getProfile, setName, setAvatar, randomName, NAME_MAX } from '../../shared/profile.js';
 import { WORDS } from './words.js';
 import { sfx } from './sound.js';
+import { figSvg, validFig, randomFig, parseFig, FIG_PARTS } from './avatars.js';
 
 const GAME_ID = 'kritzel-duell-v1'; // nicht ändern – Peer-IDs: zockbox-kritzel-duell-v1-...
 
@@ -55,7 +56,11 @@ const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == n
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const AV_COLORS = ['#ffb3dc', '#a8e6ff', '#c3f7a0', '#ffe28a', '#d6c2ff', '#ffc9a3', '#9ff5e1', '#ffaaa8'];
 const avColor = (key) => { let h = 0; for (const ch of String(key)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return AV_COLORS[h % AV_COLORS.length]; };
-const avHtml = (p, cls = 'av') => `<span class="${cls}" style="background:${avColor((p.avatar || '') + (p.name || ''))}">${esc(p.avatar)}</span>`;
+// Avatar: eigene Kritzel-Figur, sonst das Zockbox-Emoji (shared/profile.js) als Fallback
+const avHtml = (p, cls = 'av') => (validFig(p.fig)
+  ? `<span class="${cls} fig">${figSvg(p.fig)}</span>`
+  : `<span class="${cls} emo" style="background:${avColor((p.avatar || '') + (p.name || ''))}">${esc(p.avatar)}</span>`);
+const ICON = (id, cls = '') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 
 // Vergleich von Tipps: klein, Umlaute ausgeschrieben, nur Buchstaben/Ziffern.
 function norm(s) {
@@ -225,46 +230,119 @@ $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) close
 const me = getProfile();
 if (!AVATARS.includes(me.avatar)) { me.avatar = pick(AVATARS); setAvatar(me.avatar); }
 if (!me.name) me.name = randomName(); // Vorschlag – gespeichert wird erst beim Beitreten
+me.fig = parseFig(lsGet('kd_fig', '')) || randomFig();
+me.useEmoji = lsGet('kd_emoji', '0') === '1';
+const saveFig = () => { lsSet('kd_fig', me.fig.join('.')); lsSet('kd_emoji', me.useEmoji ? '1' : '0'); };
+const myAv = () => ({ name: me.name, avatar: me.avatar, fig: me.useEmoji ? null : me.fig });
 let devId = lsGet('kd_dev', '');
 if (!devId) { devId = Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('kd_dev', devId); }
+
+// Avatar-Baukasten: Pfeile links/rechts je Teil (Farbe, Augen, Mund, Extra), Würfel, Emoji-Fallback
+const avBoxes = [];
+function mountAvBox(el) {
+  const arrows = (dir) => `<div class="av-arrows">${FIG_PARTS.map((p, i) => `<button type="button" class="av-arr" data-part="${i}" data-dir="${dir}" title="${p.label} ${dir < 0 ? 'zurück' : 'weiter'}">${ICON(dir < 0 ? 'left' : 'right')}<span>${p.label} ${dir < 0 ? 'zurück' : 'weiter'}</span></button>`).join('')}</div>`;
+  el.innerHTML = `${arrows(-1)}<div class="av-center"><div class="av-part"></div><div class="av-big" title="Zufällige Figur"></div>
+    <div class="av-tools"><button type="button" data-a="dice" title="Zufällige Figur" aria-label="Zufällige Figur">${ICON('dice')}</button><button type="button" data-a="emoji" title="Zockbox-Emoji statt Figur" aria-label="Zockbox-Emoji statt Figur">${esc(me.avatar)}</button></div></div>${arrows(1)}`;
+  const label = el.querySelector('.av-part');
+  let labelT = 0;
+  const say = (t) => { label.textContent = t; clearTimeout(labelT); labelT = setTimeout(() => { label.textContent = ''; }, 1400); };
+  el.addEventListener('click', (e) => {
+    const arr = e.target.closest('.av-arr');
+    if (arr) {
+      const i = +arr.dataset.part, n = FIG_PARTS[i].n;
+      me.useEmoji = false;
+      me.fig[i] = (me.fig[i] + +arr.dataset.dir + n) % n;
+      saveFig(); sfx.play('click'); say(`${FIG_PARTS[i].label} ${me.fig[i] + 1}/${n}`); refreshAvBoxes(); onAvatarChange();
+      return;
+    }
+    const t = e.target.closest('[data-a]');
+    if ((t && t.dataset.a === 'dice') || e.target.closest('.av-big')) {
+      if (me.useEmoji && !t) { emojiPicker(); return; }
+      me.useEmoji = false; me.fig = randomFig(); saveFig(); sfx.play('pop'); refreshAvBoxes(); onAvatarChange(); return;
+    }
+    if (t && t.dataset.a === 'emoji') { emojiPicker(); }
+  });
+  for (let i = avBoxes.length - 1; i >= 0; i--) if (!avBoxes[i].isConnected) avBoxes.splice(i, 1);
+  avBoxes.push(el);
+  refreshAvBoxes();
+}
+function refreshAvBoxes() {
+  for (const el of avBoxes) {
+    if (!el.isConnected) continue;
+    el.querySelector('.av-big').innerHTML = avHtml(myAv(), 'av');
+    const eb = el.querySelector('[data-a=emoji]'); eb.textContent = me.avatar; eb.classList.toggle('on', me.useEmoji);
+  }
+}
+function emojiPicker() {
+  openModal(`<h2>Zockbox-Emoji</h2><p>Statt der Kritzel-Figur dein Emoji aus der Zockbox benutzen.</p>
+    <div class="av-emoji-grid">${AVATARS.map((a) => `<button type="button" data-av="${a}" class="${me.useEmoji && a === me.avatar ? 'on' : ''}">${a}</button>`).join('')}</div>
+    <div class="modal-btns"><button class="kd-btn kd-btn-white" id="mFig" type="button"><span>Lieber Figur</span></button><button class="kd-btn kd-btn-go" id="mOk" type="button"><span>Passt!</span></button></div>`, (card) => {
+    card.querySelectorAll('[data-av]').forEach((b) => b.onclick = () => {
+      me.avatar = b.dataset.av; setAvatar(me.avatar); me.useEmoji = true; saveFig();
+      card.querySelectorAll('[data-av]').forEach((x) => x.classList.toggle('on', x === b)); sfx.play('pop'); refreshAvBoxes(); onAvatarChange();
+    });
+    card.querySelector('#mFig').onclick = () => { me.useEmoji = false; saveFig(); closeModal(); refreshAvBoxes(); onAvatarChange(); };
+    card.querySelector('#mOk').onclick = () => { closeModal(); };
+  });
+}
+let avSendT = 0;
+function onAvatarChange() { // im Raum: Änderung an den Host schicken (gebündelt)
+  if (!room) return;
+  clearTimeout(avSendT);
+  avSendT = setTimeout(() => room && room.send({ t: 'profile', ...myAv() }), 350);
+}
 function showProfile() {
-  for (const id of ['avatarEmoji', 'avatarEmoji2']) $(id).textContent = me.avatar;
-  for (const id of ['avatarBtn', 'avatarBtn2']) $(id).style.background = avColor(me.avatar + (me.name || ''));
   for (const id of ['nameInput', 'nameInput2']) if (document.activeElement !== $(id)) $(id).value = me.name;
+  refreshAvBoxes();
 }
 function readProfile() {
   if (!me.name) me.name = setName(randomName());
   else setName(me.name);
+  saveFig();
   showProfile();
-  return { name: me.name, avatar: me.avatar, dev: devId };
+  return { ...myAv(), dev: devId };
 }
 for (const id of ['nameInput', 'nameInput2']) {
   $(id).maxLength = NAME_MAX;
   $(id).addEventListener('input', (e) => { me.name = setName(e.target.value); });
   $(id).addEventListener('blur', () => { if (!me.name) me.name = setName(randomName()); showProfile(); });
 }
-$('diceBtn').onclick = () => { me.name = setName(randomName()); showProfile(); sfx.play('pop'); };
-function avatarPicker(after) {
-  openModal(`<h2>Dein Avatar</h2>
-    <div class="av-grid">${AVATARS.map((a) => `<button type="button" data-av="${a}" class="${a === me.avatar ? 'on' : ''}">${a}</button>`).join('')}</div>
-    <div class="kd-prof" style="margin-top:14px"><input class="zb-input" id="mName" type="text" maxlength="${NAME_MAX}" value="${esc(me.name)}" placeholder="Gib deinen Namen ein" autocomplete="off">
-    <button class="zb-btn zb-btn-ghost zb-dice" id="mDice" type="button" aria-label="Zufälliger Name">🎲</button></div>
-    <div class="modal-btns"><button class="zb-btn zb-btn-ghost" id="mRand" type="button">🎲 Zufälliger Avatar</button><button class="zb-btn zb-btn-primary" id="mOk" type="button">Passt!</button></div>`, (card) => {
-    card.querySelectorAll('[data-av]').forEach((b) => b.onclick = () => {
-      me.avatar = b.dataset.av; setAvatar(me.avatar);
-      card.querySelectorAll('[data-av]').forEach((x) => x.classList.toggle('on', x === b)); sfx.play('pop');
-    });
-    card.querySelector('#mRand').onclick = () => { const b = pick([...card.querySelectorAll('[data-av]')]); b.click(); };
-    card.querySelector('#mDice').onclick = () => { card.querySelector('#mName').value = randomName(); };
+function profileModal() { // im Raum: eigenen Namen/Figur ändern
+  openModal(`<h2>Deine Figur</h2><div class="kd-avbox" id="mAvBox"></div>
+    <div class="kd-namerow" style="margin-top:12px"><input class="kd-input" id="mName" type="text" maxlength="${NAME_MAX}" value="${esc(me.name)}" placeholder="Gib deinen Namen ein" autocomplete="off"></div>
+    <div class="modal-btns"><button class="kd-btn kd-btn-go" id="mOk" type="button"><span>Passt!</span></button></div>`, (card) => {
+    mountAvBox(card.querySelector('#mAvBox'));
     card.querySelector('#mOk').onclick = () => {
       me.name = setName(card.querySelector('#mName').value || randomName());
-      closeModal(); showProfile(); after && after();
+      closeModal(); showProfile();
+      room && room.send({ t: 'profile', ...myAv() });
     };
   });
 }
-$('avatarBtn').onclick = () => avatarPicker();
-$('avatarBtn2').onclick = () => avatarPicker();
+mountAvBox($('avBox'));
+mountAvBox($('avBox2'));
 showProfile();
+
+// Startseite: zwei zufällige Figuren im Duell + „Wie gespielt wird“-Folien
+function vsRow() {
+  const a = randomFig(), b = randomFig();
+  a[3] = pick([1, 10, 10, 0, 2]); b[3] = pick([1, 10, 10, 0, 6]);
+  $('vsRow').innerHTML = `<span class="vs-fig l">${figSvg(a)}</span><span class="vs-badge">VS</span><span class="vs-fig r">${figSvg(b)}</span>`;
+}
+vsRow();
+setInterval(() => { if (curScreen === 'home' && !document.hidden) vsRow(); }, 4800);
+let howIdx = 0, howT = 0;
+const howSlides = [...document.querySelectorAll('#howSlides .how-slide')];
+$('howDots').innerHTML = howSlides.map((_, i) => `<button type="button" aria-label="Schritt ${i + 1}" data-i="${i}"></button>`).join('');
+function howGo(i) {
+  howIdx = (i + howSlides.length) % howSlides.length;
+  howSlides.forEach((el, k) => el.classList.toggle('on', k === howIdx));
+  document.querySelectorAll('#howDots button').forEach((b, k) => b.classList.toggle('on', k === howIdx));
+  clearTimeout(howT); howT = setTimeout(() => { if (curScreen === 'home') howGo(howIdx + 1); else howT = 0; }, 5200);
+}
+$('howDots').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) howGo(+b.dataset.i); });
+$('howSlides').addEventListener('click', () => howGo(howIdx + 1));
+howGo(0);
 
 // ---------------------------------------------------------------------------
 // Bildschirme
@@ -272,8 +350,10 @@ showProfile();
 const SCREENS = ['home', 'invite', 'room'];
 let curScreen = 'home';
 function show(name) {
+  if (name === curScreen && name === 'room') return;
   for (const s of SCREENS) $('scr-' + s).classList.toggle('hidden', s !== name);
   curScreen = name;
+  if (name === 'home' && !howT) howGo(howIdx);
   document.body.classList.toggle('on-home', name !== 'room');
   document.body.classList.toggle('in-room', name === 'room');
   if (name === 'room') { window.scrollTo(0, 0); requestAnimationFrame(fitBoard); }
@@ -339,7 +419,7 @@ function personalState(pid) {
     t: 'state', phase: H.phase, hostId: room.myId, code: room.code, isPublic: room.isPublic,
     settings: { ...H.settings, custom: pid === room.myId ? H.settings.custom : '', customCount: customList().length },
     round: H.round, turn: H.turn, drawer: H.drawer,
-    players: H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, score: H.players[id].score, guessed: H.guessed.has(id) })),
+    players: H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, fig: H.players[id].fig, score: H.players[id].score, guessed: H.guessed.has(id) })),
     endsIn: H.endsAt ? Math.max(0, H.endsAt - Date.now()) : 0, totalMs: H.totalMs,
     autoIn: H.autoAt ? Math.max(0, H.autoAt - Date.now()) : 0,
     liked: pid in H.likes,
@@ -365,7 +445,7 @@ function startGame() {
   if (H.settings.customOnly && customList().length < 10) {
     sys('Für „Nur eigene Wörter benutzen“ brauchst du mindestens 10 eigene Wörter!', 'err', (id) => id === room.myId); return;
   }
-  H.round = 0; H.turn = 0; H.used.clear(); H.autoAt = 0; H.final = null; H.reveal = null;
+  H.round = 0; H.used.clear(); // H.turn läuft weiter: Clients erkennen so jeden neuen Zug sicher H.autoAt = 0; H.final = null; H.reveal = null;
   for (const id of H.order) H.players[id].score = 0;
   nextRound();
 }
@@ -419,14 +499,14 @@ function endTurn(reason) {
   const likes = Object.values(H.likes);
   H.reveal = {
     word: H.word, reason, drawer: H.drawer, likes: likes.filter((v) => v === 1).length, dislikes: likes.filter((v) => v === 0).length,
-    gains: H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, pts: gains[id] || 0, drawer: id === H.drawer }))
+    gains: H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, fig: H.players[id].fig, pts: gains[id] || 0, drawer: id === H.drawer }))
       .sort((a, b) => b.pts - a.pts),
   };
   if (H.word) sys(`Das Wort war '${H.word}'`, 'word');
   H.phase = 'reveal'; setTimer(T.reveal); sync();
 }
 function finishGame() {
-  const ranked = H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, score: H.players[id].score }))
+  const ranked = H.order.map((id) => ({ id, name: H.players[id].name, avatar: H.players[id].avatar, fig: H.players[id].fig, score: H.players[id].score }))
     .sort((a, b) => b.score - a.score);
   let rank = 0, last = null;
   ranked.forEach((p, i) => { if (p.score !== last) { rank = i + 1; last = p.score; } p.rank = rank; });
@@ -598,6 +678,7 @@ function hostHandle(from, msg) {
       const old = p.name;
       p.name = String(msg.name || '').replace(/\s+/g, ' ').trim().slice(0, 16) || 'Gast';
       if (AVATARS.includes(msg.avatar)) p.avatar = msg.avatar;
+      p.fig = cleanFig(msg.fig);
       if (old !== p.name) sys(`${old} heißt jetzt ${p.name}`);
       sync();
       break;
@@ -639,10 +720,11 @@ function setupHost() {
   setInterval(hostTick, 200);
   sync();
 }
+function cleanFig(f) { return validFig(f) ? f.slice(0, 4) : null; }
 function addPlayer(id, hello) {
   H.players[id] = {
     name: String(hello.name || '').replace(/\s+/g, ' ').trim().slice(0, 16) || 'Gast',
-    avatar: AVATARS.includes(hello.avatar) ? hello.avatar : pick(AVATARS), score: 0, dev: String(hello.dev || '').slice(0, 40),
+    avatar: AVATARS.includes(hello.avatar) ? hello.avatar : pick(AVATARS), fig: cleanFig(hello.fig), score: 0, dev: String(hello.dev || '').slice(0, 40),
   };
   H.order.push(id);
   H.seen[id] = Date.now();
@@ -722,6 +804,7 @@ function render() {
   $('lobby').classList.toggle('hidden', S.phase !== 'lobby');
   $('boardWrap').classList.toggle('hidden', S.phase === 'lobby');
   $('tools').classList.toggle('hidden', !amDrawer());
+  if (chatStick) $('chatLog').scrollTop = $('chatLog').scrollHeight;
   if (!amDrawer()) stopStroke();
   renderBar();
   renderPlayers();
@@ -768,9 +851,9 @@ function renderPlayers() {
     const mine = p.id === myId();
     const drawing = p.id === S.drawer && (S.phase === 'draw' || S.phase === 'choose');
     return `<button type="button" class="pl ${p.guessed ? 'ok' : ''} ${mine ? 'me' : ''} ${drawing ? 'drw' : ''}" data-pid="${esc(p.id)}">
-      ${inGame ? `<span class="rk">#${rank[p.id]}</span>` : ''}${avHtml(p)}
+      ${inGame ? `<span class="rk r${rank[p.id]}">#${rank[p.id]}</span>` : ''}
       <span class="pl-mid"><span class="nm">${esc(p.name)}${mine ? ' <em>(Du)</em>' : ''}</span>${inGame ? `<span class="sc">${p.score} Punkte</span>` : ''}</span>
-      <span class="pl-ic">${p.id === S.hostId ? '<span title="Raumbesitzer">👑</span>' : ''}${drawing ? '<span title="zeichnet">✏️</span>' : ''}${muted.has(p.id) ? '<span>🔇</span>' : ''}</span></button>`;
+      <span class="pl-ic">${drawing ? ICON('pencil', 'dr') : ''}${p.id === S.hostId ? `<span title="Raumbesitzer">${ICON('crown')}</span>` : ''}${muted.has(p.id) ? ICON('mute') : ''}</span>${avHtml(p)}</button>`;
   }).join('') + (S.kick ? `<div class="kickbox">🗳️ <b>${esc(S.kick.name)}</b> kicken? ${S.kick.votes}/${S.kick.need}${!S.kick.mine && S.kick.target !== myId() ? ` <button type="button" class="kd-mini" data-vk="${esc(S.kick.target)}">Ja</button>` : ''}</div>` : '');
 }
 $('players').addEventListener('click', (e) => {
@@ -780,14 +863,14 @@ $('players').addEventListener('click', (e) => {
 });
 function playerMenu(pid) {
   const p = playerById(pid); if (!p) return;
-  if (pid === myId()) { avatarPicker(() => room && room.send({ t: 'profile', name: me.name, avatar: me.avatar })); return; }
+  if (pid === myId()) { profileModal(); return; }
   const host = isHost();
-  openModal(`<div class="pm-av">${avHtml(p)}</div><h2>${esc(p.name)}</h2><p class="zb-hint" style="text-align:center">${p.id === S.hostId ? 'Raumbesitzer · ' : ''}${S.phase !== 'lobby' ? `${p.score} Punkte` : 'in der Lobby'}</p>
+  openModal(`<div class="pm-av">${avHtml(p)}</div><h2>${esc(p.name)}</h2><p>${p.id === S.hostId ? 'Raumbesitzer · ' : ''}${S.phase !== 'lobby' ? `${p.score} Punkte` : 'in der Lobby'}</p>
     <div class="modal-btns col">
-      <button class="zb-btn zb-btn-ghost" data-a="mute" type="button">${muted.has(pid) ? '🔊 Stumm. aufheben' : '🔇 Stummschalten'}</button>
-      ${pid !== S.hostId && !host ? '<button class="zb-btn kd-danger" data-a="vk" type="button">🗳️ Votekicken</button>' : ''}
-      ${host ? '<button class="zb-btn kd-danger" data-a="kick" type="button">👢 Kicken</button><button class="zb-btn kd-danger" data-a="ban" type="button">⛔ Bannen</button>' : ''}
-      <button class="zb-btn zb-btn-ghost" data-a="close" type="button">Schließen</button></div>`, (card) => {
+      <button class="kd-btn kd-btn-white" data-a="mute" type="button"><span>${muted.has(pid) ? 'Stummschaltung aufheben' : 'Stummschalten'}</span></button>
+      ${pid !== S.hostId && !host ? '<button class="kd-btn kd-btn-red" data-a="vk" type="button"><span>Votekick</span></button>' : ''}
+      ${host ? '<button class="kd-btn kd-btn-red" data-a="kick" type="button"><span>Kicken</span></button><button class="kd-btn kd-btn-red" data-a="ban" type="button"><span>Bannen</span></button>' : ''}
+      <button class="kd-link" data-a="close" type="button">Schließen</button></div>`, (card) => {
     card.querySelector('[data-a=close]').onclick = closeModal;
     card.querySelector('[data-a=mute]').onclick = () => {
       closeModal();
@@ -822,7 +905,8 @@ function renderLobby() {
   $('setCustom').placeholder = host ? 'Minimum von 10 Wörtern. 1-32 Buchstaben pro Wort. 10000 Buchstaben maximal. Getrennt durch ein , (Komma)' : 'Keine eigenen Wörter';
   $('setCustomOnly').checked = !!s.customOnly;
   $('modeHint').textContent = MODE_HINT[s.mode] || '';
-  $('codeTxt').textContent = codeShown ? S.code : '••••';
+  $('codeTxt').textContent = codeShown || S.isPublic ? inviteUrl() : inviteUrl().replace(/code=\w+/, 'code=••••');
+  $('showCodeBtn').classList.toggle('hidden', !!S.isPublic);
   $('showCodeBtn').textContent = codeShown ? 'Verbergen' : 'Anzeigen';
   $('startBtn').classList.toggle('hidden', !host);
   $('startBtn').disabled = S.players.length < 2;
@@ -860,20 +944,21 @@ $('copyBtn').onclick = async () => {
 };
 
 // OVERLAYS (Runde, Wortwahl, Auflösung, Podium) ------------------------------
+const BELL = '<svg class="ov-bell" viewBox="0 0 64 60" aria-hidden="true"><path d="M32 6c-12 0-20 9-20 22v10l-6 8h52l-6-8V28c0-13-8-22-20-22z" fill="#ffd23f" stroke="#1b1b1f" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="52" r="5" fill="#1b1b1f"/><path d="M4 18q2-8 8-12M60 18q-2-8-8-12" fill="none" stroke="#1b1b1f" stroke-width="3.5" stroke-linecap="round"/></svg>';
 function renderOverlay() {
   const ov = $('ov'), card = $('ovCard');
   let key = S.phase + ':' + S.turn, html = '';
   const drawerP = playerById(S.drawer) || { name: '?', avatar: '❔' };
-  if (S.phase === 'round') html = `<div class="ov-round"><small>Los geht's</small><b>Runde ${S.round}</b><span>von ${S.settings.rounds}</span></div>`;
+  if (S.phase === 'round') html = `<div class="ov-round">${BELL}<small>Ding ding!</small><b>Runde ${S.round}</b><span>von ${S.settings.rounds}</span></div>`;
   else if (S.phase === 'choose') {
     if (S.drawer === myId() && S.choices) {
-      html = `<h3>Wähle ein Wort</h3><div class="choices">${S.choices.map((w, i) => `<button type="button" class="choice" data-i="${i}">${esc(w)}</button>`).join('')}</div><p class="ov-sub">Sonst wird in ein paar Sekunden automatisch eins gewählt.</p>`;
-    } else html = `<div class="ov-who">${avHtml(drawerP, 'av big')}<b>${esc(drawerP.name)} wählt ein Wort!</b></div>`;
+      html = `<h3>Wähle ein Wort</h3><div class="choices">${S.choices.map((w, i) => `<button type="button" class="choice" data-i="${i}">${esc(w)}</button>`).join('')}</div>`;
+    } else html = `<div class="ov-who">${avHtml(drawerP, 'av')}<b>${esc(drawerP.name)} wählt ein Wort!</b></div>`;
   } else if (S.phase === 'reveal' && S.reveal) {
     const rv = S.reveal;
     const reason = { all: 'Jeder hat das Wort erraten!', time: 'Die Zeit ist abgelaufen!', left: 'Der Zeichner hat das Spiel verlassen!' }[rv.reason] || '';
-    html = `<p class="ov-sub">Das Wort war</p><h3 class="ov-word">${esc(rv.word || '?')}</h3><p class="ov-reason">${reason}</p>
-      <div class="gains">${rv.gains.map((g) => `<div class="gain ${g.pts ? 'plus' : ''}"><span class="gn">${g.drawer ? '✏️ ' : ''}${esc(g.name)}</span><b>${g.pts ? '+' + g.pts : '0'}</b></div>`).join('')}</div>
+    html = `<p class="ov-sub">Das Wort war</p><h3 class="ov-word"><span>${esc(rv.word || '?')}</span></h3><p class="ov-reason">${reason}</p>
+      <div class="gains">${rv.gains.map((g) => `<div class="gain ${g.pts ? 'plus' : ''}"><span class="gn">${g.drawer ? '✏️ ' : ''}${esc(g.name)}</span><span class="dots"></span><b>${g.pts ? '+' + g.pts : '0'}</b></div>`).join('')}</div>
       ${rv.likes || rv.dislikes ? `<p class="ov-likes">👍 ${rv.likes} · 👎 ${rv.dislikes}</p>` : ''}`;
   } else if (S.phase === 'final' && S.final) {
     key += ':' + isHost();
@@ -881,10 +966,10 @@ function renderOverlay() {
     const order = [top[1], top[0], top[2]].filter(Boolean);
     const winners = S.final.filter((p) => p.rank === 1);
     html = `<h3 class="ov-final-t">${winners.length > 1 ? `${winners.map((w) => esc(w.name)).join(' & ')} haben gewonnen!` : winners[0] && winners[0].score > 0 ? `${esc(winners[0].name)} hat gewonnen!` : 'Niemand hat gewonnen!'}</h3>
-      <div class="podium">${order.map((p) => `<div class="pod pod-${p.rank > 3 ? 3 : p.rank}"><div class="pod-av">${avHtml(p, 'av big')}${p.rank === 1 ? '<span class="pod-crown">👑</span>' : ''}</div>
-        <span class="pod-nm">${esc(p.name)}</span><span class="pod-sc">${p.score} Punkte</span><div class="pod-col"><b>${p.rank}</b></div></div>`).join('')}</div>
+      <div class="podium">${order.map((p) => `<div class="pod pod-${p.rank > 3 ? 3 : p.rank}"><div class="pod-av">${avHtml(p, 'av')}${p.rank === 1 ? `<span class="pod-crown">${ICON('crown')}</span>` : ''}</div>
+        <span class="pod-nm">${esc(p.name)}</span><span class="pod-sc">${p.score} Punkte</span><div class="pod-col">${p.rank === 1 ? '<span class="pod-belt"></span>' : `<b>${p.rank}</b>`}</div></div>`).join('')}</div>
       ${S.final.length > 3 ? `<div class="rest">${S.final.slice(3).map((p) => `<span>#${p.rank} ${esc(p.name)} · ${p.score}</span>`).join('')}</div>` : ''}
-      ${isHost() ? '<button type="button" class="zb-btn zb-btn-primary kd-small-btn" id="toLobbyBtn">Zurück zur Lobby</button>' : '<p class="ov-sub">Gleich geht es zurück in die Lobby …</p>'}`;
+      ${isHost() ? '<button type="button" class="kd-btn kd-btn-go" id="toLobbyBtn"><span>Zurück zur Lobby</span></button>' : '<p class="ov-sub">Gleich geht es zurück in die Lobby …</p>'}`;
   } else key = 'none';
   if (key !== lastOvKey) {
     lastOvKey = key;
@@ -897,7 +982,7 @@ function renderOverlay() {
 $('ovCard').addEventListener('click', (e) => {
   const c = e.target.closest('[data-i]');
   if (c && room) { sfx.play('click'); room.send({ t: 'choose', i: +c.dataset.i }); c.closest('.choices').querySelectorAll('button').forEach((b) => (b.disabled = true)); return; }
-  if (e.target.id === 'toLobbyBtn' && room) room.send({ t: 'lobby' });
+  if (e.target.closest('#toLobbyBtn') && room) room.send({ t: 'lobby' });
 });
 $('rate').addEventListener('click', (e) => {
   const b = e.target.closest('[data-like]'); if (!b || !room) return;
@@ -908,11 +993,12 @@ $('rate').addEventListener('click', (e) => {
 });
 function confetti() {
   const box = $('ov');
-  const colors = ['#c6ff3d', '#ff4fd8', '#7c5cff', '#3de0ff', '#ffd60a', '#ff8a00'];
+  const colors = ['#ff5a5f', '#ffd23f', '#9be15d', '#5ec8ff', '#ff7ac8', '#ff9f1c', '#fffef9'];
   for (let i = 0; i < 60; i++) {
     const c = document.createElement('i');
     c.className = 'confetti';
     c.style.left = Math.random() * 100 + '%';
+    c.style.transform = `rotate(${Math.random() * 90}deg)`;
     c.style.background = pick(colors);
     c.style.animationDelay = Math.random() * 1.2 + 's';
     c.style.animationDuration = 2 + Math.random() * 2 + 's';
@@ -926,7 +1012,7 @@ let lastTick = -1;
 setInterval(() => {
   if (!S) return;
   const num = $('clockNum'), arc = $('clockArc');
-  const C = 2 * Math.PI * 17;
+  const C = 2 * Math.PI * 14.5;
   if (!localDeadline || !S.totalMs) { num.textContent = S.phase === 'lobby' && localAuto ? Math.ceil(Math.max(0, localAuto - Date.now()) / 1000) : '–'; arc.style.strokeDasharray = `${C} ${C}`; arc.style.strokeDashoffset = '0'; $('clock').classList.remove('low'); return; }
   const left = Math.max(0, localDeadline - Date.now());
   const s = Math.ceil(left / 1000);
@@ -949,10 +1035,9 @@ function addChat(m) {
   const text = filterBad ? cleanBad(m.text) : m.text;
   if (m.name) { const b = document.createElement('b'); b.textContent = (filterBad ? cleanBad(m.name) : m.name) + ': '; d.appendChild(b); }
   d.appendChild(document.createTextNode(text));
-  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
   log.appendChild(d);
   while (log.children.length > 150) log.firstChild.remove();
-  if (atBottom) log.scrollTop = log.scrollHeight;
+  if (chatStick) log.scrollTop = log.scrollHeight;
   if (m.k === 'guessed') sfx.play('guessed');
   else if (m.k === 'join') sfx.play('join');
   else if (m.k === 'leave') sfx.play('leave');
@@ -963,6 +1048,15 @@ function addChat(m) {
     while ($('bubbles').children.length > 3) $('bubbles').firstChild.remove();
   }
 }
+// Chat bleibt unten „kleben“, solange man nicht selbst hochgescrollt hat – auch wenn sich die Höhe ändert (Tastatur, Drehen)
+let chatStick = true;
+let chatUserAt = 0; // nur echtes Scrollen durch den Nutzer löst das „Kleben“ (Layoutwechsel wie Werkzeugleiste/Tastatur nicht)
+for (const ev of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) $('chatLog').addEventListener(ev, () => { chatUserAt = Date.now(); }, { passive: true });
+$('chatLog').addEventListener('scroll', () => {
+  const l = $('chatLog'), atEnd = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
+  if (atEnd) chatStick = true; else if (Date.now() - chatUserAt < 1500) chatStick = false;
+}, { passive: true });
+if (window.ResizeObserver) new ResizeObserver(() => { if (chatStick) $('chatLog').scrollTop = $('chatLog').scrollHeight; }).observe($('chatLog'));
 $('chatForm').onsubmit = (e) => {
   e.preventDefault();
   const v = $('chatInput').value.trim();
@@ -1076,22 +1170,36 @@ function fitBoard() {
   if (h > r.height) { h = r.height; w = (h * 4) / 3; }
   bd.style.width = Math.floor(w) + 'px'; bd.style.height = Math.floor(h) + 'px';
 }
+// Mobil: Ist die Bildschirmtastatur für den Chat offen, schrumpft das Layout auf den sichtbaren Bereich
+// (visualViewport) – Zeichenfläche oben, Chat + Eingabe direkt darunter, nichts wird verdeckt.
+const touchUI = matchMedia('(hover: none) and (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+let kbOpen = false, baseW = 0, baseH = 0;
 function setAppHeight() {
   const vv = window.visualViewport;
   const h = vv ? vv.height : window.innerHeight;
-  document.documentElement.style.setProperty('--app-h', h + 'px');
-  if (curScreen === 'room') { window.scrollTo(0, 0); }
-  fitBoard();
+  const root = document.documentElement.style;
+  root.setProperty('--app-h', Math.round(h) + 'px');
+  root.setProperty('--vv-top', (vv && curScreen === 'room' ? Math.max(0, Math.round(vv.offsetTop)) : 0) + 'px');
+  const w = window.innerWidth;
+  if (w !== baseW) { baseW = w; baseH = 0; } // Drehen → neu messen
+  baseH = Math.max(baseH, h);
+  const kb = curScreen === 'room' && touchUI && document.activeElement === $('chatInput') && h < baseH * 0.8;
+  if (kb !== kbOpen) { kbOpen = kb; $('scr-room').classList.toggle('kb', kb); if (kb) requestAnimationFrame(() => { $('chatLog').scrollTop = $('chatLog').scrollHeight; }); }
+  if (curScreen === 'room' && !kb) window.scrollTo(0, 0);
+  requestAnimationFrame(fitBoard);
 }
 window.addEventListener('resize', setAppHeight);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', setAppHeight); window.visualViewport.addEventListener('scroll', setAppHeight); }
+$('chatInput').addEventListener('focus', () => { setAppHeight(); setTimeout(setAppHeight, 350); });
+$('chatInput').addEventListener('blur', () => { setTimeout(setAppHeight, 60); });
 setAppHeight();
 
 // ===========================================================================
 // TON + EINSTELLUNGEN + VERLASSEN
 // ===========================================================================
 function showSound() {
-  for (const id of ['soundBtn', 'soundBtnTop']) $(id).textContent = sfx.muted ? '🔇' : '🔊';
+  for (const id of ['soundBtn', 'soundBtnTop']) $(id).querySelector('use').setAttribute('href', sfx.muted ? '#i-mute' : '#i-sound');
+  $('darkChk').checked = document.body.classList.contains('dark');
   $('muteChk').checked = sfx.muted; $('volRange').value = Math.round(sfx.volume * 100);
   $('filterChk').checked = filterBad; $('bubbleChk').checked = bubblesOn;
 }
@@ -1102,14 +1210,16 @@ $('volRange').onchange = () => sfx.play('pop');
 $('muteChk').onchange = (e) => { sfx.muted = e.target.checked; showSound(); };
 $('filterChk').onchange = (e) => { filterBad = e.target.checked; lsSet('kd_filter', filterBad ? '1' : '0'); };
 $('bubbleChk').onchange = (e) => { bubblesOn = e.target.checked; lsSet('kd_bubbles', bubblesOn ? '1' : '0'); };
-document.addEventListener('click', (e) => { if (!$('gearPop').contains(e.target) && e.target !== $('gearBtn')) $('gearPop').classList.add('hidden'); });
+$('darkChk').onchange = (e) => { document.body.classList.toggle('dark', e.target.checked); lsSet('kd_dark', e.target.checked ? '1' : '0'); };
+if (lsGet('kd_dark', '0') === '1') document.body.classList.add('dark');
+document.addEventListener('click', (e) => { if (!$('gearPop').contains(e.target) && !$('gearBtn').contains(e.target)) $('gearPop').classList.add('hidden'); });
 showSound();
 
 $('leaveBtn').onclick = () => {
   if (!room) { show('home'); return; }
   const hostWarn = isHost() && S && S.players.length > 1;
   openModal(`<h2>Raum verlassen?</h2><p>${hostWarn ? 'Du bist Raumbesitzer – wenn du gehst, ist das Spiel für alle vorbei.' : 'Willst du den Raum wirklich verlassen?'}</p>
-    <div class="modal-btns"><button class="zb-btn zb-btn-ghost" data-a="no" type="button">Bleiben</button><button class="zb-btn kd-danger" data-a="yes" type="button">Verlassen</button></div>`, (card) => {
+    <div class="modal-btns"><button class="kd-btn kd-btn-white" data-a="no" type="button"><span>Bleiben</span></button><button class="kd-btn kd-btn-red" data-a="yes" type="button"><span>Verlassen</span></button></div>`, (card) => {
     card.querySelector('[data-a=no]').onclick = closeModal;
     card.querySelector('[data-a=yes]').onclick = () => { closeModal(); resetToHome(); };
   });
@@ -1186,9 +1296,9 @@ async function browse() {
   let list = [];
   try { list = await Room.listPublic(GAME_ID); } catch (e) { box.innerHTML = `<p class="kd-empty">${esc(errText(e))}</p>`; return; }
   if (!list.length) { box.innerHTML = '<p class="kd-empty">Keine Räume gefunden! Starte doch einen mit „Spielen!“.</p>'; return; }
-  box.innerHTML = list.map((l) => `<div class="kd-room"><span class="kd-room-ic">✏️</span><div class="kd-room-main"><b>Raum von ${esc(l.host)}</b>
+  box.innerHTML = list.map((l) => `<div class="kd-room"><div class="kd-room-main"><b>Raum von ${esc(l.host)}</b>
     <small>${l.players}/${l.max} Spieler · ${esc(MODE_NAME[l.mode] || 'Normal')} · ${l.phase === 'lobby' ? 'Nicht gestartet' : `Runde ${Math.max(1, l.round)} von ${l.rounds}`}</small></div>
-    <button class="zb-btn zb-btn-primary kd-small-btn" data-slot="${l.slot}" type="button" ${l.players < l.max ? '' : 'disabled'}>Rein</button></div>`).join('');
+    <button class="kd-btn kd-btn-go kd-btn-sm" data-slot="${l.slot}" type="button" ${l.players < l.max ? '' : 'disabled'}><span>Rein</span></button></div>`).join('');
 }
 $('roomList').addEventListener('click', (e) => { const b = e.target.closest('[data-slot]'); if (b) busy(b, () => joinPub(+b.dataset.slot)); });
 $('refreshBtn').onclick = () => browse();
@@ -1203,7 +1313,7 @@ let inviteJoin = null;
 const codeParam = params.get('code') || params.get('join');
 if (codeParam) {
   const c = codeParam.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (c.length === 4) { inviteJoin = () => joinCode(c); $('inviteHint').textContent = `Raum ${c} wartet auf dich. Such dir Namen und Avatar aus und spring rein.`; }
+  if (c.length === 4) { inviteJoin = () => joinCode(c); $('inviteHint').textContent = `Raum ${c} wartet auf dich. Such dir Namen und Figur aus und steig in den Ring.`; }
 } else if (params.get('pub')) {
   const n = +params.get('pub');
   if (n >= 1 && n <= 8) inviteJoin = () => joinPub(n);

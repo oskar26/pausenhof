@@ -35,6 +35,13 @@ const COUNTDOWN_MS = 7000;
 const SOLO_COUNTDOWN_MS = 4000;
 const GRACE_MS = 60000;
 const AUTO_NEXT_MS = 25000;
+// Verbindung: Herzschlag, Wiederverbinden, Rückkehr nach Neuladen
+const PING_MS = 4000;          // Client → Host
+const HOST_SILENT_MS = 16000;  // so lange ohne Nachricht vom Host → neu verbinden
+const CLIENT_SILENT_MS = 25000; // so lange ohne Nachricht vom Client → gilt als getrennt
+const DROP_MS = 45000;         // so lange wartet der Host auf einen getrennten Spieler
+const RECONNECT_MS = 75000;    // so lange versucht ein Client, wieder reinzukommen
+const RESUME_MS = 180000;      // so alt darf eine Lobby nach dem Neuladen sein, um sie fortzusetzen
 const POWERS = {
   ink: { name: 'Tintenklecks', icon: '🖋', desc: 'Kleckst 8 Sekunden lang Tinte über den Artikel', ms: 8000 },
   fog: { name: 'Nebel', icon: '🌫', desc: 'Verschwimmt den Artikel 6 Sekunden lang', ms: 6000 },
@@ -73,6 +80,15 @@ const me = {
 };
 if (!AVATARS.includes(me.avatar) && !/^\p{Extended_Pictographic}/u.test(me.avatar)) me.avatar = pick(AVATARS);
 let IMGS = {}; // Spieler-ID → Bild (vom Host verteilt)
+// Sitzungs-ID (pro Tab, übersteht Neuladen): Damit erkennt der Host einen Spieler wieder, der kurz weg war.
+const sess = {
+  get(k, d) { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const rid = () => Math.random().toString(36).slice(2, 12);
+let SID = sess.get('wr_sid', '') || rid();
+sess.set('wr_sid', SID);
+const TAB = rid(); // pro Seitenaufruf neu – unterscheidet ein kopiertes Tab vom Neuladen
 
 function avHtml(emoji, id, cls = '') {
   const img = id && IMGS[id];
@@ -129,7 +145,7 @@ function readProfile() {
   localStorage.setItem('ph_name', n);
   localStorage.setItem('ph_avatar', me.avatar);
   renderProfile();
-  return { name: me.name, avatar: me.avatar, img: me.img || '' };
+  return { name: me.name, avatar: me.avatar, img: me.img || '', sid: SID, tab: TAB };
 }
 renderProfile();
 
@@ -330,15 +346,18 @@ function newHostState(over = {}) {
   return {
     phase: 'lobby', settings: { ...DEFAULTS, ...over }, players: {}, order: [], imgs: {},
     roundNo: 0, R: null, endsAt: 0, prepToken: 0, lastRoute: [], suggestions: [], history: [], duel: false, autoAt: 0, dailyDate: null,
+    lid: rid(), seen: {}, ghosts: {}, kicked: [],
   };
 }
 
+function cleanSid(v) { return typeof v === 'string' && /^[a-z0-9]{4,24}$/.test(v) ? v : ''; }
 function hostAddPlayer(id, hello) {
   H.players[id] = {
     name: String(hello.name || 'Gast').slice(0, 16),
     avatar: typeof hello.avatar === 'string' && hello.avatar.length <= 16 ? hello.avatar : pick(AVATARS),
-    score: 0,
+    score: 0, sid: cleanSid(hello.sid), tab: String(hello.tab || '').slice(0, 24), off: 0,
   };
+  H.seen[id] = Date.now();
   const img = hello.img;
   if (typeof img === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(img) && img.length < 24000) H.imgs[id] = img;
   H.order.push(id);
@@ -370,7 +389,7 @@ function finishOrder() {
 function publicState(forId) {
   const st = {
     t: 'state', phase: H.phase, hostId: room.myId, code: room.code, isPublic: room.isPublic, duel: H.duel,
-    settings: H.settings, players: H.order.map((id) => ({ id, ...H.players[id] })),
+    settings: H.settings, players: H.order.map((id) => { const x = H.players[id]; return { id, name: x.name, avatar: x.avatar, score: x.score, off: !!x.off }; }), lid: H.lid,
     roundNo: H.roundNo, endsIn: H.endsAt ? Math.max(0, H.endsAt - Date.now()) : 0,
     suggestions: H.suggestions, history: H.history, autoIn: H.autoAt ? Math.max(0, H.autoAt - Date.now()) : 0,
   };
@@ -382,7 +401,7 @@ function publicState(forId) {
     const p = {};
     for (const [id, x] of Object.entries(R.p)) {
       p[id] = { name: x.name, avatar: x.avatar, clicks: x.clicks, cur: x.cur, status: x.status, time: x.time, pts: x.pts, short: x.short,
-        place: order.indexOf(id) + 1 || 0, left: !H.players[id], found: x.found, backs: x.backs, restarts: x.restarts, powers: id === forId ? x.powers : undefined };
+        place: order.indexOf(id) + 1 || 0, left: !H.players[id], off: !!(H.players[id] && H.players[id].off), found: x.found, backs: x.backs, restarts: x.restarts, powers: id === forId ? x.powers : undefined };
       if (reveal || id === forId) p[id].path = x.path;
     }
     st.round = { n: R.n, lang: R.lang, start: R.start, target: R.targets[0], targets: R.targets, startSummary: R.startSummary,
@@ -393,7 +412,8 @@ function publicState(forId) {
 
 function sync() {
   if (!room || !room.isHost || !H) return;
-  for (const id of H.order) room.sendTo(id, publicState(id));
+  for (const id of H.order) if (!H.players[id].off || id === room.myId) room.sendTo(id, publicState(id));
+  saveHostSnap();
 }
 function sysChat(text) { if (ctx.kind !== 'solo') room.broadcast({ t: 'chat', sys: true, text }); }
 function sendImgs() { if (ctx.kind !== 'solo') room.broadcast({ t: 'imgs', imgs: H.imgs }); else IMGS = { ...H.imgs }; }
@@ -516,9 +536,11 @@ function endRound() {
 
 function hostTick() {
   if (!H) return;
+  if (ctx.kind !== 'solo') hostWatch();
   if (H.duel && H.phase === 'lobby') {
-    if (H.order.length >= 2 && !H.autoAt) { H.autoAt = Date.now() + 5000; sysChat('⚔ Gegner gefunden – das Duell startet in 5 Sekunden!'); sync(); }
-    if (H.order.length < 2 && H.autoAt) { H.autoAt = 0; sync(); }
+    const online = H.order.filter((id) => !H.players[id].off).length;
+    if (online >= 2 && !H.autoAt) { H.autoAt = Date.now() + 5000; sysChat('⚔ Gegner gefunden – das Duell startet in 5 Sekunden!'); sync(); }
+    if (online < 2 && H.autoAt) { H.autoAt = 0; sync(); }
     if (H.autoAt && Date.now() >= H.autoAt) { H.autoAt = 0; hostStart(null); }
   }
   if (!H.endsAt || Date.now() < H.endsAt) return;
@@ -560,6 +582,7 @@ function hostMove(from, msg) {
   const R = H.R;
   const pr = R && R.p[from];
   if (H.phase !== 'race' || !pr || pr.status !== 'racing') return;
+  if (msg.n != null && msg.n !== R.n) return; // verspäteter Zug aus der letzten Runde
   const title = normTitle(msg.title);
   if (!title) return;
   const ms = Date.now() - R.startedAt;
@@ -605,7 +628,17 @@ function hostHandle(from, msg) {
   if (!msg || typeof msg !== 'object' || !H) return;
   const isHostMsg = from === room.myId;
   const R = H.R;
+  if (!isHostMsg) H.seen[from] = Date.now();
   switch (msg.t) {
+    case 'ping':
+      room.sendTo(from, { t: 'pong' });
+      break;
+    case 'bye':
+      if (!isHostMsg) { hostRemove(from); room.kick(from); }
+      break;
+    case 'away': // Seite wird neu geladen oder geschlossen → warten, ob er zurückkommt
+      if (!isHostMsg) { room.kick(from); hostLost(from); }
+      break;
     case 'settings': {
       if (!isHostMsg || !['lobby', 'results'].includes(H.phase)) return;
       const s = H.settings;
@@ -659,7 +692,7 @@ function hostHandle(from, msg) {
     }
     case 'restart': {
       const pr = R && R.p[from];
-      if (H.phase !== 'race' || !pr || pr.status !== 'racing' || !H.settings.restart) return;
+      if (H.phase !== 'race' || !pr || pr.status !== 'racing' || !H.settings.restart || (msg.n != null && msg.n !== R.n)) return;
       pr.stack = [R.start]; pr.cur = R.start; pr.clicks = 0; pr.restarts++;
       pr.path.push({ t: R.start, ms: Date.now() - R.startedAt, r: 1 });
       sync();
@@ -679,7 +712,7 @@ function hostHandle(from, msg) {
       const victim = R && R.p[msg.to];
       const pw = POWERS[msg.kind];
       if (!H.settings.power || H.phase !== 'race' || !pr || !pw || pr.status !== 'racing' || !(pr.powers[msg.kind] > 0)) return;
-      if (!victim || msg.to === from || victim.status !== 'racing' || victim.gone) { room.sendTo(from, { t: 'err', text: 'Dieses Ziel kann gerade nicht getroffen werden' }); return; }
+      if (!victim || msg.to === from || victim.status !== 'racing' || victim.gone || !H.players[msg.to] || H.players[msg.to].off) { room.sendTo(from, { t: 'err', text: 'Dieses Ziel kann gerade nicht getroffen werden' }); return; }
       pr.powers[msg.kind]--;
       room.sendTo(msg.to, { t: 'hit', kind: msg.kind, by: pr.name });
       sysChat(`${pw.icon} ${pr.name} → ${victim.name}: ${pw.name}!`);
@@ -712,24 +745,29 @@ function hostHandle(from, msg) {
     case 'kick':
       if (!isHostMsg || msg.id === room.myId || !H.players[msg.id]) return;
       room.sendTo(msg.id, { t: 'kicked' });
+      if (H.players[msg.id].sid) H.kicked.push(H.players[msg.id].sid);
       setTimeout(() => room.kick(msg.id), 700);
-      hostRemove(msg.id);
+      hostRemove(msg.id, true);
       break;
   }
 }
 
-function hostRemove(id) {
+function hostRemove(id, kicked = false) {
   if (!H.players[id]) return;
-  const name = H.players[id].name;
+  const pl = H.players[id];
+  const name = pl.name;
+  // Geist merken: Kommt der Spieler (gleiche Sitzungs-ID) später zurück, bekommt er Punkte und Weg wieder.
+  if (pl.sid && !kicked) H.ghosts[pl.sid] = { id, pl: { ...pl }, img: H.imgs[id] || null, prev: H.R && H.R.p[id] ? H.R.p[id].status : null, round: H.R ? H.R.n : 0 };
   delete H.players[id];
   delete H.imgs[id];
+  delete H.seen[id];
   H.order = H.order.filter((x) => x !== id);
   if (H.R && H.R.p[id]) {
     const pr = H.R.p[id];
     if (pr.status === 'racing' || pr.status === 'spectator') pr.status = 'gaveup';
     pr.gone = true;
   }
-  sysChat(`${name} hat die Lobby verlassen`);
+  sysChat(kicked ? `${name} wurde aus der Lobby entfernt` : `${name} hat die Lobby verlassen`);
   sendImgs();
   checkRoundEnd();
   sync();
@@ -738,29 +776,129 @@ function hostRemove(id) {
 function setupHost(over = {}, duel = false) {
   H = newHostState(over);
   H.duel = duel;
+  hostAddPlayer(room.myId, readProfile());
+  wireHost();
+  sendImgs();
+  sync();
+}
+
+function wireHost() {
   room.getInfo = () => ({
     phase: H.phase, players: H.order.length, max: H.settings.max, lang: H.settings.lang, route: H.settings.route, targets: H.settings.targets,
     host: H.players[room.myId] ? H.players[room.myId].name : '?', duel: H.duel,
     endsIn: H.phase === 'race' && H.endsAt ? Math.max(0, H.endsAt - Date.now()) : 0, round: H.roundNo, rounds: H.settings.rounds,
   });
-  room.onClientJoin = (id, hello) => {
-    if (H.order.length >= H.settings.max) {
-      room.sendTo(id, { t: 'full' });
-      setTimeout(() => room.kick(id), 300);
-      return;
-    }
-    hostAddPlayer(id, hello || {});
-    sysChat(`${H.players[id].avatar} ${H.players[id].name} ist beigetreten`);
-    sendImgs();
-    sync();
-  };
-  room.onClientLeave = (id) => hostRemove(id);
+  room.onClientJoin = (id, hello) => hostJoin(id, hello || {});
+  room.onClientLeave = (id) => hostLost(id);
   room.onClientMessage = (from, msg) => hostHandle(from, msg);
-  hostAddPlayer(room.myId, readProfile());
   clearInterval(setupHost.iv);
   setupHost.iv = setInterval(hostTick, 250);
+}
+
+function hostJoin(id, hello) {
+  const sid = cleanSid(hello.sid);
+  if (sid && H.kicked.includes(sid)) { room.sendTo(id, { t: 'kicked' }); setTimeout(() => room.kick(id), 300); return; }
+  // Derselbe Spieler kommt zurück (Verbindung weg, Seite neu geladen, WLAN gewechselt …)?
+  const oldId = sid && H.order.find((x) => x !== room.myId && x !== id && H.players[x].sid === sid);
+  if (oldId) {
+    const old = H.players[oldId];
+    const c = room.conns.get(oldId);
+    const stale = old.off || !c || !c.open || old.tab === String(hello.tab || '') || Date.now() - (H.seen[oldId] || 0) > 8000;
+    if (stale) { hostRejoin(oldId, id, hello); return; }
+    // Gleiche Sitzungs-ID, aber das alte Tab ist noch aktiv → kopiertes Tab: als neuer Spieler mit neuer ID
+    const nsid = rid();
+    room.sendTo(id, { t: 'newsid', sid: nsid });
+    hello = { ...hello, sid: nsid };
+  }
+  if (sid && H.ghosts[sid] && !oldId) { hostRevive(sid, id, hello); return; }
+  if (H.order.length >= H.settings.max) {
+    room.sendTo(id, { t: 'full' });
+    setTimeout(() => room.kick(id), 300);
+    return;
+  }
+  hostAddPlayer(id, hello);
+  sysChat(`${H.players[id].avatar} ${H.players[id].name} ist beigetreten`);
   sendImgs();
   sync();
+}
+
+// Spieler-ID überall umbenennen (neue Peer-ID nach dem Wiederverbinden)
+function renameId(a, b) {
+  if (a === b) return;
+  if (H.players[a]) { H.players[b] = H.players[a]; delete H.players[a]; }
+  H.order = H.order.map((x) => (x === a ? b : x));
+  if (H.imgs[a]) { H.imgs[b] = H.imgs[a]; delete H.imgs[a]; }
+  if (H.seen[a]) { H.seen[b] = H.seen[a]; delete H.seen[a]; }
+  if (H.R) {
+    if (H.R.p[a]) { H.R.p[b] = H.R.p[a]; delete H.R.p[a]; }
+    H.R.firstFound = H.R.firstFound.map((x) => (x === a ? b : x));
+  }
+  for (const x of H.suggestions) if (x.by === a) x.by = b;
+  for (const h of H.history) if (h.winner && h.winner.id === a) h.winner.id = b;
+}
+
+function hostRejoin(oldId, id, hello) {
+  if (room.conns.get(oldId)) room.kick(oldId); // alte, tote Verbindung schließen (löst kein „verlassen“ aus)
+  renameId(oldId, id);
+  const pl = H.players[id];
+  const wasOff = pl.off;
+  pl.off = 0; pl.tab = String(hello.tab || '').slice(0, 24);
+  H.seen[id] = Date.now();
+  sysChat(wasOff ? `🔌 ${pl.name} ist wieder da` : `🔌 ${pl.name} hat sich neu verbunden`);
+  sendImgs();
+  sync();
+}
+
+function hostRevive(sid, id, hello) {
+  const g = H.ghosts[sid];
+  delete H.ghosts[sid];
+  if (H.order.length >= H.settings.max) { room.sendTo(id, { t: 'full' }); setTimeout(() => room.kick(id), 300); return; }
+  H.players[id] = { ...g.pl, off: 0, tab: String(hello.tab || '').slice(0, 24) };
+  H.order.push(id);
+  H.seen[id] = Date.now();
+  if (g.img) H.imgs[id] = g.img;
+  const R = H.R;
+  if (R && R.p[g.id] && R.n === g.round) {
+    R.p[id] = R.p[g.id]; delete R.p[g.id];
+    R.firstFound = R.firstFound.map((x) => (x === g.id ? id : x));
+    const pr = R.p[id];
+    pr.gone = false;
+    if (H.phase === 'race' && pr.status === 'gaveup' && (g.prev === 'racing' || g.prev === 'spectator')) pr.status = g.prev;
+  } else if (R && (H.phase === 'countdown' || H.phase === 'race') && !R.p[id]) {
+    R.p[id] = newRoundPlayer(id, H.phase === 'race' ? 'spectator' : 'racing');
+  }
+  for (const x of H.suggestions) if (x.by === g.id) x.by = id;
+  sysChat(`🔌 ${H.players[id].name} ist zurück`);
+  sendImgs();
+  sync();
+}
+
+// Verbindung zu einem Spieler weg: noch nicht rauswerfen, sondern DROP_MS lang auf die Rückkehr warten
+function hostLost(id) {
+  const pl = H && H.players[id];
+  if (!pl || pl.off || id === room.myId) return;
+  pl.off = Date.now();
+  sysChat(`📶 ${pl.name} hat die Verbindung verloren – warte auf Rückkehr …`);
+  sync();
+}
+
+let lastPeerFix = 0;
+function hostWatch() {
+  const now = Date.now();
+  for (const id of H.order.slice()) {
+    if (id === room.myId) continue;
+    const pl = H.players[id];
+    if (pl.off) {
+      if (now - pl.off > DROP_MS) hostRemove(id);
+    } else if (now - (H.seen[id] || now) > CLIENT_SILENT_MS) {
+      // keine Pings mehr: Verbindung ist tot, auch wenn WebRTC es noch nicht gemerkt hat
+      if (room.conns.get(id)) room.kick(id);
+      hostLost(id);
+    }
+  }
+  // Vermittlungsserver verloren (WLAN-Wechsel, Standby): immer wieder neu anmelden, sonst findet niemand die Lobby
+  const pe = room.peer;
+  if (pe && pe.disconnected && !pe.destroyed && now - lastPeerFix > 5000) { lastPeerFix = now; try { pe.reconnect(); } catch (e) {} }
 }
 
 // ===========================================================================
@@ -769,7 +907,7 @@ function setupHost(over = {}, duel = false) {
 let S = null;             // letzter Zustand vom Host
 let localDeadline = 0;
 let lastPhase = null;
-const L = { round: -1, stack: [], visits: [], cur: null, token: 0, clicks: 0, spec: null, celebrated: false, warnedGrace: false, bannerRound: -1, savedRound: -1, fxLock: 0, found: new Set() };
+const L = { round: -1, stack: [], visits: [], cur: null, token: 0, clicks: 0, spec: null, celebrated: false, warnedGrace: false, bannerRound: -1, savedRound: -1, fxLock: 0, found: new Set(), needResync: false, sent: [], expectLid: null };
 
 const frame = new WikiFrame($('wikiHost'), {
   onNavigate: (title, anchor) => navigate(title, anchor),
@@ -790,8 +928,15 @@ function isHost() { return room && room.isHost; }
 
 function onHostMessage(msg) {
   if (!msg || typeof msg !== 'object') return;
+  lastHostAt = Date.now();
+  if (msg.t === 'pong') return;
   if (msg.t === 'state') {
+    if (L.expectLid && msg.lid) {
+      if (msg.lid !== L.expectLid) toast('Die alte Lobby gibt es nicht mehr – du bist jetzt in einer neuen Lobby mit diesem Code.', 5000);
+      L.expectLid = null;
+    }
     S = msg;
+    if (!isHost() && ctx.kind === 'multi') saveClientSnap();
     localDeadline = msg.endsIn ? Date.now() + msg.endsIn : 0;
     render();
   } else if (msg.t === 'chat') addChat(msg);
@@ -800,13 +945,27 @@ function onHostMessage(msg) {
   else if (msg.t === 'reject') { toast(msg.text, 3000); if (msg.cur) resyncTo(msg.cur); }
   else if (msg.t === 'full') { toast('Die Lobby ist voll'); resetToStart(); }
   else if (msg.t === 'kicked') { toast('Du wurdest aus der Lobby entfernt'); resetToStart(); }
+  else if (msg.t === 'hostaway') { if (room && !room.isHost) startReconnect(); }
+  else if (msg.t === 'closed') { toast('Der Host hat die Lobby geschlossen', 4000); resetToStart(); }
+  else if (msg.t === 'newsid' && typeof msg.sid === 'string') { SID = msg.sid; sess.set('wr_sid', SID); }
   else if (msg.t === 'hit') applyHit(msg);
 }
 
 function resetToStart() {
   const r = room;
   room = null; S = null;
-  if (r) r.leave();
+  reconnecting = null;
+  sess.set('wr_host_v1', null); sess.set('wr_client_v1', null);
+  if (r) {
+    r.onHostLost = () => {}; r.onHostMessage = () => {}; r.onClientLeave = () => {};
+    // Absichtlich gehen: allen Bescheid sagen, damit niemand auf eine Rückkehr wartet
+    let polite = false;
+    try {
+      if (r.peer && r.isHost && ctx.kind !== 'solo' && r.conns.size) { for (const c of r.conns.values()) if (c.open) c.send({ t: 'closed' }); polite = true; }
+      else if (r.peer && !r.isHost && r.hostConn && r.hostConn.open) { r.hostConn.send({ t: 'bye' }); polite = true; }
+    } catch (e) {}
+    if (polite) setTimeout(() => r.leave(), 400); else r.leave();
+  }
   clearInterval(setupHost.iv);
   H = null; lastPhase = null; IMGS = {};
   L.round = -1; L.savedRound = -1;
@@ -825,7 +984,25 @@ function render() {
   placeRouteBox();
   if (S.phase === 'lobby') { renderLobby(); show('lobby'); }
   else if (S.phase === 'prep' || S.phase === 'countdown') { renderCountdown(); show('countdown'); }
-  else if (S.phase === 'race') { show('race'); renderRace(phaseChanged); }
+  else if (S.phase === 'race') {
+    show('race');
+    // Nach dem Wiederverbinden: Was der Host von mir kennt, gilt (Klicks während der Funkstille sind verloren)
+    const mine = myRound();
+    if (L.needResync && S.round && L.round === S.round.n && mine && mine.path) {
+      L.needResync = false;
+      const hp = mine.path;
+      const prefix = hp.length <= L.visits.length && hp.every((v, i) => sameTitle(v.t, L.visits[i].t));
+      const missing = L.sent.slice(hp.length, L.visits.length);
+      if (mine.status === 'racing' && prefix && hp.length < L.visits.length && missing.length === L.visits.length - hp.length && missing.every(Boolean)) {
+        for (const m of missing) room.send(m); // Klicks aus dem Funkloch nachreichen
+        toast('✓ Deine Klicks wurden nachgereicht', 2500);
+      } else if (mine.status === 'racing' && (!sameTitle(mine.cur, L.cur) || mine.clicks !== L.clicks || hp.length !== L.visits.length)) {
+        toast('Dein Weg wurde mit dem Host abgeglichen', 3000);
+        resyncTo(mine.cur);
+      }
+    }
+    renderRace(phaseChanged);
+  }
   else { renderResults(); show('results'); }
   if (phaseChanged) scheduleToc();
 }
@@ -897,7 +1074,7 @@ function renderLobby() {
   $('playerCount').textContent = `(${S.players.length}/${s.max})`;
   $('playerList').innerHTML = S.players.map((p) => `
     <li class="${p.id === room.myId ? 'me' : ''}">${avHtml(p.avatar, p.id)}<span class="nm">${esc(p.name)}</span>
-      ${p.id === S.hostId ? '<span class="tag">(Host)</span>' : ''}${p.id === room.myId ? '<span class="tag">(du)</span>' : ''}
+      ${p.id === S.hostId ? '<span class="tag">(Host)</span>' : ''}${p.id === room.myId ? '<span class="tag">(du)</span>' : ''}${p.off ? '<span class="tag">(Verbindung weg …)</span>' : ''}
       ${host && p.id !== S.hostId ? `<button class="kick" data-kick="${esc(p.id)}" title="Aus der Lobby entfernen">[entfernen]</button>` : ''}</li>`).join('');
   applySettingsToForm();
   renderSuggestions();
@@ -1091,17 +1268,39 @@ function scrollToFrame() {
   if (window.scrollY > top || top - window.scrollY > 160) window.scrollTo({ top: Math.max(0, top) });
 }
 
+// Jeder Zug wird gemerkt (Index = Besuch). Gehen Züge in einem Funkloch verloren, werden sie nach dem Wiederverbinden nachgereicht.
+function sendMove(msg) {
+  L.sent[L.visits.length - 1] = msg;
+  room.send(msg);
+}
+
+function pathToLocal(mine) {
+  // Weg vom Host → eigener Stapel (für Zurück), Besuche und Klicks
+  L.stack = [];
+  for (const v of mine.path) { if (v.r) L.stack = [v.t]; else if (v.b) L.stack.pop(); else L.stack.push(v.t); }
+  if (!L.stack.length) L.stack = [S.round.start];
+  L.visits = mine.path.map((v) => ({ t: v.t, b: v.b, r: v.r, f: v.f }));
+  L.clicks = mine.clicks;
+  L.cur = mine.cur;
+  L.found = new Set();
+  L.sent = mine.path.map(() => null);
+}
+
 async function startLocalRace() {
   const R = S.round;
   L.round = R.n; L.stack = [R.start]; L.visits = [{ t: R.start }]; L.cur = R.start; L.clicks = 0; L.found = new Set();
-  L.spec = null; L.celebrated = false; L.warnedGrace = false; L.token++;
+  L.spec = null; L.celebrated = false; L.warnedGrace = false; L.token++; L.needResync = false; L.sent = [null];
+  // Mitten im Rennen neu geladen oder neu verbunden: dort weitermachen, wo der Host mich kennt
+  const mine = myRound();
+  if (mine && mine.path && mine.path.length > 1) pathToLocal(mine);
   clearFx();
   $('modalCards').innerHTML = targetCards(R);
   $('modalRules').innerHTML = rulesList(S);
   $('ruleLine').innerHTML = rulesList(S);
   frame.setLoading(true, 'Lade Start …');
-  try { await showArticle(R.start); }
-  catch (e) { frame.showMessage(R.start, '<p>Der Startartikel konnte nicht geladen werden. Prüfe deine Internetverbindung.</p>'); }
+  const token = L.token;
+  try { const a = await showArticle(L.cur); if (token !== L.token && a) return; }
+  catch (e) { if (token === L.token) frame.showMessage(L.cur, '<p>Der Artikel konnte nicht geladen werden. Prüfe deine Internetverbindung.</p>'); }
   frame.setLoading(false);
   window.scrollTo({ top: 0 });
 }
@@ -1113,6 +1312,7 @@ function isUnfoundTarget(title) {
 
 async function navigate(title, anchor) {
   if (!S || S.phase !== 'race') return;
+  if (reconnecting) { toast('📶 Verbindung wird wiederhergestellt – einen Moment …'); return; }
   const mine = myRound();
   if (!mine || mine.status !== 'racing') {
     toast(mine && mine.status === 'spectator' ? 'Du schaust diese Runde nur zu' : 'Du bist schon fertig – jetzt kannst du zuschauen');
@@ -1148,12 +1348,13 @@ async function navigate(title, anchor) {
       else toast(`🎯 Ziel gefunden: ${art.title}`);
     } else toast('Das ist ein Ziel! Tipp auf „Gefunden!“');
   }
-  room.send({ t: 'move', title: art.title, via: title, from });
+  sendMove({ t: 'move', title: art.title, via: title, from, n: S.round.n });
   renderRace(false);
 }
 
 async function goBack() {
   if (!S || S.phase !== 'race' || !S.settings.back) return;
+  if (reconnecting) { toast('📶 Verbindung wird wiederhergestellt – einen Moment …'); return; }
   const mine = myRound();
   if (!mine || mine.status !== 'racing' || L.stack.length < 2 || L.fxLock > Date.now()) return;
   const prev = L.stack[L.stack.length - 2];
@@ -1165,7 +1366,7 @@ async function goBack() {
     L.stack.pop(); L.visits.push({ t: prev, b: 1 }); L.cur = prev; L.clicks++;
     frame.show(art, { lang: S.round.lang });
     scrollToFrame();
-    room.send({ t: 'move', title: prev, back: true });
+    sendMove({ t: 'move', title: prev, back: true, n: S.round.n });
   } catch (e) { toast('Zurück ging gerade nicht'); }
   if (token === L.token) frame.setLoading(false);
   renderRace(false);
@@ -1178,24 +1379,21 @@ async function restartRun() {
   if (!confirm('Neustart: zurück zum Startartikel, deine Klicks gehen auf 0. Die Zeit läuft weiter.')) return;
   L.token++;
   L.stack = [S.round.start]; L.visits.push({ t: S.round.start, r: 1 }); L.cur = S.round.start; L.clicks = 0;
-  room.send({ t: 'restart' });
+  sendMove({ t: 'restart', n: S.round.n });
   try { await showArticle(S.round.start); } catch (e) {}
   window.scrollTo({ top: 0 });
   renderRace(false);
 }
 
 async function resyncTo(cur) {
-  // Host lehnt einen Zug ab → zurück auf den Artikel, den der Host kennt
+  // Host lehnt einen Zug ab (oder Klicks gingen beim Verbindungsabbruch verloren) → zurück auf den Stand des Hosts
   if (!S || S.phase !== 'race') return;
   const mine = myRound();
-  if (mine && mine.path) {
-    L.stack = [];
-    for (const v of mine.path) { if (v.r) L.stack = [v.t]; else if (v.b) L.stack.pop(); else L.stack.push(v.t); }
-    L.visits = mine.path.map((v) => ({ t: v.t, b: v.b, r: v.r, f: v.f }));
-    L.clicks = mine.clicks;
-  }
+  if (mine && mine.path) pathToLocal(mine);
   L.cur = cur;
-  try { await showArticle(cur); } catch (e) {}
+  const token = ++L.token;
+  try { const a = await fetchArticle(S.round.lang, cur); if (token === L.token && S && S.phase === 'race') { await frame.setLang(S.round.lang); frame.show(a, { lang: S.round.lang }); } } catch (e) {}
+  if (S && S.phase === 'race') renderRace(false);
 }
 
 function celebrate() {
@@ -1274,7 +1472,7 @@ function renderRace() {
   $('liveCount').textContent = `${entries.filter(([, p]) => p.status === 'done').length}/${entries.filter(([, p]) => p.status !== 'spectator').length}`;
   $('liveList').innerHTML = entries.map(([id, p]) => {
     const cl = id === room.myId && racing ? L.clicks : p.clicks;
-    const where = id === room.myId && racing ? statusText({ ...p, cur: L.cur }, R) : statusText(p, R);
+    const where = (id === room.myId && racing ? statusText({ ...p, cur: L.cur }, R) : statusText(p, R)) + (p.off ? ' · 📶 Verbindung weg' : '');
     return `<li class="live ${id === room.myId ? 'me' : ''} ${p.status === 'done' ? 'done' : ''} ${['gaveup', 'limit', 'dq', 'timeout'].includes(p.status) ? 'out' : ''} ${canSpec ? 'can' : ''} ${L.spec === id ? 'sel' : ''}" data-id="${esc(id)}">
       ${avHtml(p.avatar, id)}<span class="nm">${esc(p.name)}${id === S.hostId && ctx.kind !== 'solo' ? ' <span class="muted small">(Host)</span>' : ''}</span><span class="cl">${cl} Kl.</span>
       <span class="where">${esc(where)}</span></li>`;
@@ -1486,9 +1684,9 @@ function renderResults() {
   $('soloAgainBtn').textContent = ctx.type === 'free' ? 'Noch ein Einzelrennen' : 'Neue Zufallsroute';
   $('retryBtn').classList.toggle('hidden', !(solo && final && ['level', 'daily', 'challenge', 'random', 'free'].includes(ctx.type)));
   $('retryBtn').textContent = 'Gleiche Route nochmal';
-  $('nextLevelBtn').classList.toggle('hidden', !(solo && final && ctx.type === 'level' && ctx.level + 1 < LEVELS.length && levelUnlocked(ctx.level + 1)));
   if (solo && !final && S.phase === 'results') { $('nextBox').classList.add('hidden'); }
-  renderSoloOutcome(final);
+  renderSoloOutcome(final); // speichert den Bestwert – erst danach ist die nächste Stufe frei
+  $('nextLevelBtn').classList.toggle('hidden', !(solo && final && ctx.type === 'level' && ctx.level + 1 < LEVELS.length && levelUnlocked(ctx.level + 1)));
   updateNextNote();
 }
 
@@ -1737,8 +1935,129 @@ function newRoom() {
   document.body.classList.remove('solo');
   const r = new Room(GAME_ID);
   r.onHostMessage = onHostMessage;
-  r.onHostLost = () => { if (room === r) { toast('Verbindung zum Host verloren', 3500); resetToStart(); } };
+  r.onHostLost = () => { if (room === r) startReconnect(); };
   return r;
+}
+
+// ---------------------------------------------------------------------------
+// VERBINDUNG: Herzschlag, automatisch neu verbinden, nach Neuladen weitermachen
+// ---------------------------------------------------------------------------
+let lastHostAt = 0;
+let reconnecting = null; // { since, code, pub, lid }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+setInterval(() => {
+  const r = room;
+  if (!r || r.isHost || ctx.kind === 'solo' || reconnecting || !r.hostConn) return;
+  if (r.hostConn.open) r.send({ t: 'ping' });
+  if (Date.now() - lastHostAt > HOST_SILENT_MS) startReconnect();
+}, PING_MS);
+document.addEventListener('visibilitychange', () => {
+  // Zurück aus dem Hintergrund (Handy): sofort prüfen, ob der Host noch antwortet
+  const r = room;
+  if (document.visibilityState !== 'visible' || !r || r.isHost || ctx.kind === 'solo' || reconnecting || !r.hostConn) return;
+  if (!r.hostConn.open) { startReconnect(); return; }
+  r.send({ t: 'ping' });
+  setTimeout(() => { if (room === r && !reconnecting && Date.now() - lastHostAt > 6000) startReconnect(); }, 5000);
+});
+
+function startReconnect() {
+  const old = room;
+  if (reconnecting || !old || old.isHost || ctx.kind === 'solo') return;
+  const pub = old.isPublic ? +String(old.code).replace('Ö', '') : 0;
+  reconnecting = { since: Date.now(), code: old.code, pub, lid: S ? S.lid : null };
+  old.onHostLost = () => {}; old.onHostMessage = () => {};
+  try { if (old.hostConn) old.hostConn.close(); } catch (e) {}
+  toast('📶 Verbindung zum Host unterbrochen – verbinde neu …', 5000);
+  if (S && S.phase === 'race') renderRace(false);
+  reconnectLoop(reconnecting, old);
+}
+
+async function reconnectLoop(job, old) {
+  let tries = 0;
+  while (reconnecting === job && Date.now() - job.since < RECONNECT_MS) {
+    tries++;
+    const r = newRoom();
+    if (!r) break;
+    let ok = false;
+    try { ok = job.pub ? await r.joinPublic(job.pub, readProfile()) : await r.joinPrivate(job.code, readProfile()); } catch (e) { ok = false; }
+    if (reconnecting !== job) { r.leave(); return; }
+    if (ok) {
+      reconnecting = null;
+      room = r;
+      lastHostAt = Date.now();
+      L.needResync = true;
+      L.expectLid = job.lid;
+      try { old.leave(); } catch (e) {}
+      toast('✓ Wieder verbunden', 2500);
+      return;
+    }
+    r.leave();
+    if (tries % 3 === 0) toast('📶 Host nicht erreichbar – versuche es weiter …', 4000);
+    await sleep(Math.min(5000, 1200 + tries * 600));
+  }
+  if (reconnecting !== job) return;
+  reconnecting = null;
+  room = old; // damit resetToStart sauber aufräumt
+  toast('Die Lobby ist nicht mehr erreichbar – der Host ist wohl weg.', 5000);
+  resetToStart();
+}
+
+// Lobby-Zustand für den Fall „Seite neu geladen“ (nur in diesem Tab, sessionStorage)
+let snapAt = 0;
+function saveHostSnap(force) {
+  if (!room || !room.isHost || ctx.kind !== 'multi' || !H || !room.code) return;
+  if (!force && Date.now() - snapAt < 1000) { clearTimeout(saveHostSnap.t); saveHostSnap.t = setTimeout(() => saveHostSnap(true), 1100); return; }
+  snapAt = Date.now();
+  const h = { ...H, prepToken: 0 };
+  sess.set('wr_host_v1', { at: Date.now(), code: room.code, pub: room.isPublic, myId: room.myId, H: h });
+}
+function saveClientSnap() {
+  if (!room || room.isHost || !S || !S.code) return;
+  const prev = sess.get('wr_client_v1', null);
+  if (prev && prev.code === S.code && Date.now() - prev.at < 5000) return;
+  sess.set('wr_client_v1', { at: Date.now(), code: S.code, pub: S.isPublic });
+}
+window.addEventListener('pagehide', () => {
+  // Neu laden / Tab zu: sofort Bescheid sagen, statt die anderen 16 s auf den Herzschlag warten zu lassen
+  const r = room;
+  if (!r || ctx.kind === 'solo') return;
+  try {
+    if (r.isHost) { saveHostSnap(true); for (const c of r.conns.values()) if (c.open) c.send({ t: 'hostaway' }); }
+    else { if (S) sess.set('wr_client_v1', { at: Date.now(), code: S.code, pub: S.isPublic }); if (r.hostConn && r.hostConn.open) r.hostConn.send({ t: 'away' }); }
+  } catch (e) {}
+});
+
+// Host hat neu geladen: Lobby mit demselben Code wieder öffnen und den Zustand übernehmen
+async function resumeHost(snap) {
+  room = newRoom(); if (!room) return false;
+  const r = room;
+  const pid = snap.pub ? r._publicId(+String(snap.code).replace('Ö', '')) : r._privateId(snap.code);
+  let peer = null;
+  for (let i = 0; i < 10 && !peer; i++) {
+    peer = await new Promise((res) => {
+      const pe = new Peer(pid);
+      const t = setTimeout(() => { try { pe.destroy(); } catch (e) {} res(null); }, 10000);
+      pe.on('open', () => { clearTimeout(t); res(pe); });
+      pe.on('error', () => { clearTimeout(t); try { pe.destroy(); } catch (e) {} res(null); });
+    });
+    if (!peer) await sleep(2000); // alte Anmeldung ist beim Vermittlungsserver noch nicht abgelaufen
+    if (room !== r) { if (peer) peer.destroy(); return false; }
+  }
+  if (!peer) { room = null; return false; }
+  r.code = snap.code; r.isPublic = !!snap.pub;
+  await r._becomeHost(peer);
+  H = snap.H;
+  H.seen = {}; H.ghosts = H.ghosts || {}; H.kicked = H.kicked || [];
+  if (snap.myId !== r.myId) renameId(snap.myId, r.myId);
+  const now = Date.now();
+  for (const id of H.order) { if (id !== r.myId) { H.players[id].off = H.players[id].off || now; } H.seen[id] = now; }
+  if (H.phase === 'prep') { H.phase = H.R ? 'results' : 'lobby'; H.endsAt = 0; }
+  wireHost();
+  sysChat('🔌 Der Host ist zurück');
+  sendImgs();
+  sync();
+  return true;
 }
 
 async function busy(btn, fn) {
@@ -1763,20 +2082,28 @@ async function hostPrivate() {
   history.replaceState(null, '', `?code=${room.code}`);
 }
 
-async function joinCode(code) {
+async function joinCode(code, quiet) {
   code = String(code || '').trim().toUpperCase();
   if (pubSlot && !code) return joinPub(pubSlot);
   if (code.length !== 4) { toast('Der Code hat 4 Buchstaben'); return; }
-  room = newRoom(); if (!room) return;
-  const ok = await room.joinPrivate(code, readProfile());
-  if (!ok) { room.leave(); room = null; toast('Lobby nicht gefunden'); return; }
+  const r = newRoom(); if (!r) return;
+  room = r;
+  let ok = false;
+  try { ok = await r.joinPrivate(code, readProfile()); } catch (e) { if (room === r) room = null; r.leave(); throw e; }
+  if (room !== r) { r.leave(); return; }
+  if (!ok) { r.leave(); room = null; if (!quiet) toast('Lobby nicht gefunden – stimmt der Code?'); return; }
+  lastHostAt = Date.now();
   history.replaceState(null, '', `?code=${code}`);
 }
 
-async function joinPub(n) {
-  room = newRoom(); if (!room) return false;
-  const ok = await room.joinPublic(n, readProfile());
-  if (!ok) { room.leave(); room = null; toast('Diese Lobby gibt es nicht mehr'); return false; }
+async function joinPub(n, quiet) {
+  const r = newRoom(); if (!r) return false;
+  room = r;
+  let ok = false;
+  try { ok = await r.joinPublic(n, readProfile()); } catch (e) { if (room === r) room = null; r.leave(); throw e; }
+  if (room !== r) { r.leave(); return false; }
+  if (!ok) { r.leave(); room = null; if (!quiet) toast('Diese Lobby gibt es nicht mehr'); return false; }
+  lastHostAt = Date.now();
   history.replaceState(null, '', `?pub=${n}`);
   return true;
 }
@@ -1848,7 +2175,36 @@ $('browseBtn').onclick = () => browse();
 let pubSlot = 0;
 const params = new URLSearchParams(location.search);
 renderHome();
-if (params.get('code')) {
+// Seite neu geladen, während eine Lobby offen war? Dann automatisch weitermachen (nur im selben Tab, nur kurz danach).
+const urlLobby = params.get('code') ? params.get('code').toUpperCase().slice(0, 4) : params.get('pub') ? 'Ö' + Math.max(1, Math.min(8, +params.get('pub') || 1)) : '';
+const hostSnap = sess.get('wr_host_v1', null);
+const clientSnap = sess.get('wr_client_v1', null);
+const fresh = (x) => x && urlLobby && x.code === urlLobby && Date.now() - x.at < RESUME_MS;
+let resuming = false;
+if (fresh(hostSnap) && typeof Peer !== 'undefined') {
+  resuming = true;
+  show('start');
+  toast('Deine Lobby wird wieder geöffnet …', 6000);
+  resumeHost(hostSnap).then((ok) => {
+    if (ok) { toast('✓ Deine Lobby ist wieder offen – die anderen verbinden sich gerade neu', 4000); return; }
+    sess.set('wr_host_v1', null);
+    toast('Die Lobby konnte nicht wieder geöffnet werden', 4500);
+  }).catch(() => { room = null; toast('Die Lobby konnte nicht wieder geöffnet werden', 4500); });
+} else if (fresh(clientSnap) && typeof Peer !== 'undefined') {
+  resuming = true;
+  show('start');
+  toast('Verbinde wieder mit der Lobby …', 5000);
+  (async () => {
+    for (let i = 0; i < 5 && !room; i++) {
+      try { if (clientSnap.pub) await joinPub(+urlLobby.slice(1), true); else await joinCode(urlLobby, true); } catch (e) {}
+      if (!room) await sleep(2500);
+    }
+    if (!room) { sess.set('wr_client_v1', null); toast('Die Lobby ist nicht mehr erreichbar', 4000); }
+  })();
+}
+if (resuming) {
+  // nichts weiter – die Lobby kommt gleich
+} else if (params.get('code')) {
   const c = params.get('code').toUpperCase().slice(0, 4);
   $('codeInput').value = c; $('hdrCode').value = c;
   show('start');

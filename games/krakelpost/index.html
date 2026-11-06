@@ -5,36 +5,126 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Krakelpost – Stille Post mit Zeichnungen · Zockbox</title>
   <meta name="description" content="Krakelpost: Stille Post mit Zeichnungen. Schreib einen Satz, zeichne, rate – und lacht am Ende über die Alben. Gratis im Browser, ohne Anmeldung.">
-  <meta name="theme-color" content="#0b0a14">
+  <meta name="theme-color" content="#f3ead6">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='80' font-size='80' text-anchor='middle'>✏️</text></svg>">
-  <link rel="preload" href="../../shared/fonts/Unbounded-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='5' y='14' width='54' height='38' rx='5' fill='%23fffaf0' stroke='%2323284d' stroke-width='4'/%3E%3Cpath d='M7 17l25 19 25-19' fill='none' stroke='%2323284d' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M12 46c6-6 10 2 15-3' fill='none' stroke='%23ef4a36' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/GochiHand.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/Nunito-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="game.css">
   <script src="../../shared/vendor/peerjs.min.js"></script>
 </head>
 <body class="on-start">
-  <div class="bg" aria-hidden="true">
-    <svg class="bg-scribbles" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">
-      <path d="M-20 120 C 60 60, 120 180, 200 110 S 340 40, 430 140" stroke="#7c5cff" />
-      <path d="M-10 420 C 80 380, 90 500, 180 450 S 320 360, 420 470" stroke="#ff4fd8" />
-      <path d="M-30 700 C 40 640, 160 760, 240 690 S 380 640, 430 720" stroke="#c6ff3d" />
-      <path d="M300 250 q 20 -30 40 0 t 40 0" stroke="#3de0ff" />
-      <path d="M40 300 l 12 -12 l 12 12 l 12 -12 l 12 12" stroke="#ffb347" />
-    </svg>
-  </div>
+  <!-- Eigene Symbole (selbst gezeichnet) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- Werkzeuge -->
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4.2 19.8l1.1-4.5L15.7 4.9a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.7 18.7z"/><path d="M13.9 6.7l3.4 3.4"/><path d="M5.3 15.3l3.4 3.4"/></symbol>
+      <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 19.6h10.5"/><path d="M4 14.1l8.7-8.7a2 2 0 0 1 2.8 0l3.3 3.3a2 2 0 0 1 0 2.8l-7.5 7.5a2 2 0 0 1-1.4.6H7.7a2 2 0 0 1-1.4-.6l-2.3-2.3a1.9 1.9 0 0 1 0-2.6z"/><path d="M9.3 8.8l6.1 6.1"/></symbol>
+      <symbol id="i-fill" viewBox="0 0 24 24"><path d="M4.6 11.2l6.7-6.7 7.2 7.2-6.5 6.5a2 2 0 0 1-2.8 0l-4.6-4.2a2 2 0 0 1 0-2.8z"/><path d="M4.8 11.4h13.4"/><path d="M8.6 7.3L6.4 5.1"/><path d="M21 16.3c0 1.3-.7 2.3-1.6 2.3s-1.6-1-1.6-2.3c0-1.1 1.6-3 1.6-3s1.6 1.9 1.6 3z"/></symbol>
+      <symbol id="i-picker" viewBox="0 0 24 24"><path d="M13.6 6.4l4 4"/><path d="M15.2 8L6.6 16.6 5 20.3l-.6.6"/><path d="M6.6 16.6l1.5 1.5 8.6-8.6"/><path d="M14.8 5.2l1.7-1.7a2.2 2.2 0 0 1 3.1 0l.9.9a2.2 2.2 0 0 1 0 3.1l-1.7 1.7"/></symbol>
+      <symbol id="i-line" viewBox="0 0 24 24"><path d="M5.5 18.5L18.5 5.5"/><circle cx="5.5" cy="18.5" r="1.6" fill="currentColor"/><circle cx="18.5" cy="5.5" r="1.6" fill="currentColor"/></symbol>
+      <symbol id="i-rect" viewBox="0 0 24 24"><path d="M4.5 6.2c4.9-.3 10-.2 15 0 .2 3.9.2 7.8 0 11.6-5 .3-10 .3-15 0-.3-3.9-.3-7.7 0-11.6z"/></symbol>
+      <symbol id="i-rectf" viewBox="0 0 24 24"><path d="M4.5 6.2c4.9-.3 10-.2 15 0 .2 3.9.2 7.8 0 11.6-5 .3-10 .3-15 0-.3-3.9-.3-7.7 0-11.6z" fill="currentColor"/></symbol>
+      <symbol id="i-ellipse" viewBox="0 0 24 24"><path d="M12 5.4c4.6 0 8 3 8 6.6s-3.4 6.6-8 6.6-8-3-8-6.6c0-2.6 1.9-4.8 4.8-6"/></symbol>
+      <symbol id="i-ellipsef" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6.6" fill="currentColor"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14.5L4 9.5l5-5"/><path d="M4.5 9.5h10a5.3 5.3 0 0 1 0 10.6H11"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14.5l5-5-5-5"/><path d="M19.5 9.5h-10a5.3 5.3 0 0 0 0 10.6H13"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9.2 7V4.6h5.6V7"/><path d="M5.6 7l1 12.2a1.9 1.9 0 0 0 1.9 1.7h7a1.9 1.9 0 0 0 1.9-1.7l1-12.2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+      <!-- Oberfläche -->
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.4v5.2h3.6l4.6 3.9V5.5L7.6 9.4z"/><path d="M15.6 9a4.2 4.2 0 0 1 0 6"/><path d="M18.2 6.4a7.8 7.8 0 0 1 0 11.2"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.4v5.2h3.6l4.6 3.9V5.5L7.6 9.4z"/><path d="M16 9.5l5 5"/><path d="M21 9.5l-5 5"/></symbol>
+      <symbol id="i-door" viewBox="0 0 24 24"><path d="M13.5 4H6.6A1.6 1.6 0 0 0 5 5.6v12.8A1.6 1.6 0 0 0 6.6 20h6.9"/><path d="M10 12h10"/><path d="M16.6 8.5L20 12l-3.4 3.5"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+      <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1"/></symbol>
+      <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.6L12 15l4.5-4.4"/><path d="M5 19.6h14"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.4v13.2l10.4-6.6z" fill="currentColor"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h13"/><path d="M13 6.5l5.5 5.5-5.5 5.5"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H6"/><path d="M11 6.5L5.5 12l5.5 5.5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.4 4.4L19 7.4"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5.2 5.4h13.6a1.7 1.7 0 0 1 1.7 1.7v8.2a1.7 1.7 0 0 1-1.7 1.7H11l-4.6 3.4v-3.4H5.2a1.7 1.7 0 0 1-1.7-1.7V7.1a1.7 1.7 0 0 1 1.7-1.7z"/><path d="M8 10h8M8 13h5"/></symbol>
+      <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="8.6" cy="8.6" r="1.3" fill="currentColor"/><circle cx="15.4" cy="15.4" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="15.4" cy="8.6" r="1.3" fill="currentColor"/><circle cx="8.6" cy="15.4" r="1.3" fill="currentColor"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.4-6 9.2-6 9.2 6 9.2 6-3.4 6-9.2 6-9.2-6-9.2-6z"/><circle cx="12" cy="12" r="2.7"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M3.9 12h16.2"/><path d="M12 3.7c2.3 2.4 3.4 5.1 3.4 8.3s-1.1 5.9-3.4 8.3c-2.3-2.4-3.4-5.1-3.4-8.3S9.7 6.1 12 3.7z"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.4 3.5L5.6 13.4h5.6l-1 7.1 8.2-10.2h-5.7z"/></symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.4" y="6" width="17.2" height="12.4" rx="1.8"/><path d="M3.9 7l8.1 6.3L20.1 7"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.5 3.6L3.6 10.3l6.6 2.9 2.9 6.9z"/><path d="M20.5 3.6l-10.3 9.6"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M19.4 4.4v4.3h-4.3"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+      <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4.3 17.6L3 8.3l5.2 4.1L12 5.6l3.8 6.8L21 8.3l-1.3 9.3z" fill="#ffcd3c"/><path d="M4.5 20.2h15"/></symbol>
+      <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M7.5 5v14M16.5 5v14M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"/></symbol>
+
+      <!-- Illustrationen -->
+      <symbol id="art-emblem" viewBox="0 0 120 96">
+        <path d="M14 30c30-2 62-2 92 0 1.5 18 1.6 37 .3 56-31 1.6-61 1.4-92 0-1.4-19-1.3-37-.3-56z" fill="#fffaf0" stroke="#23284d" stroke-width="4.5" stroke-linejoin="round"/>
+        <path d="M15.5 32.5L60 64l44.5-31.5" fill="none" stroke="#23284d" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M16 84l30-24M104 84L74 60" fill="none" stroke="#23284d" stroke-width="3.5" stroke-linecap="round" opacity=".55"/>
+        <g transform="rotate(8 92 26)"><rect x="76" y="8" width="30" height="36" rx="2" fill="#ef4a36" stroke="#23284d" stroke-width="3.5"/><rect x="81" y="13" width="20" height="26" rx="1" fill="#ffcd3c" stroke="#23284d" stroke-width="2"/><path d="M85 31c3-6 6-9 8-12 2 4 4 7 5 12" fill="none" stroke="#23284d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <path d="M22 50c6-8 11 6 17-2s11 6 17-2" fill="none" stroke="#2f62e6" stroke-width="4" stroke-linecap="round"/>
+        <g transform="rotate(-38 30 18)"><rect x="6" y="12" width="44" height="11" rx="2.5" fill="#ffcd3c" stroke="#23284d" stroke-width="3.5"/><path d="M50 12l11 5.5L50 23z" fill="#f4d1a6" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/><path d="M57.5 15.8l3.5 1.7-3.5 1.7z" fill="#23284d"/><rect x="2" y="12" width="7" height="11" rx="2" fill="#ff78ad" stroke="#23284d" stroke-width="3.5"/></g>
+      </symbol>
+      <symbol id="art-postmark" viewBox="0 0 160 100">
+        <circle cx="48" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="3.5"/>
+        <circle cx="48" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M90 30c8-6 14 6 22 0s14 6 22 0 14 6 22 0M90 50c8-6 14 6 22 0s14 6 22 0 14 6 22 0M90 70c8-6 14 6 22 0s14 6 22 0 14 6 22 0" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="art-talk" viewBox="0 0 96 72">
+        <path d="M10 12c15-2 32-2 46 0 1.5 9 1.5 19 0 27-8 .8-15 1-22 .8L22 50l1-10.6c-5 0-9-.3-13-.8-1.5-9-1.5-18 0-26.6z" fill="#9fd4ff" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M44 30c14-1.6 28-1.5 41 0 1.4 8 1.4 16 0 24-3.5.5-7 .7-10 .8l1.2 9.6-11-9.4c-7 0-14-.4-21-1-1.4-8-1.4-16 0-24z" fill="#ffcd3c" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M20 22h26M20 30h16M55 40h20M55 47h12" stroke="#23284d" stroke-width="3" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="art-write" viewBox="0 0 96 72">
+        <path d="M8 12c26-1.5 54-1.5 80 0 1 16 1 32 0 48-26 1.5-54 1.5-80 0-1-16-1-32 0-48z" fill="#fffaf0" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M16 28h40M16 40h52M16 52h30" stroke="#9fd4ff" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M17 25c4-5 6 3 10-1s6 4 10 0 5 3 8 0" fill="none" stroke="#ef4a36" stroke-width="3" stroke-linecap="round"/>
+        <g transform="rotate(35 70 40)"><rect x="56" y="34" width="34" height="10" rx="2" fill="#ffcd3c" stroke="#23284d" stroke-width="3.2"/><path d="M56 34l-9 5 9 5z" fill="#f4d1a6" stroke="#23284d" stroke-width="3.2" stroke-linejoin="round"/></g>
+      </symbol>
+      <symbol id="art-draw" viewBox="0 0 96 72">
+        <path d="M8 10c26-1.5 54-1.5 80 0 1 17 1 34 0 52-26 1.5-54 1.5-80 0-1-17-1-35 0-52z" fill="#fff" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/>
+        <circle cx="30" cy="30" r="9" fill="#ffcd3c" stroke="#23284d" stroke-width="3"/>
+        <path d="M30 15v-3M30 48v-3M15 30h-3M48 30h-3M19.5 19.5l-2-2M42.5 42.5l-2-2" stroke="#23284d" stroke-width="3" stroke-linecap="round"/>
+        <path d="M14 56c10-12 18-14 26-6 7-10 18-14 28-4 4-3 10-4 16 0" fill="none" stroke="#2fae6a" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M60 26c4-4 8 0 12-3" fill="none" stroke="#2f62e6" stroke-width="3" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="art-guess" viewBox="0 0 96 72">
+        <path d="M8 14c22-1.5 44-1.5 64 0 1 14 1 28 0 42-20 1.5-42 1.5-64 0-1-14-1-28 0-42z" fill="#fff" stroke="#23284d" stroke-width="3.5"/>
+        <path d="M18 44c6-14 14-14 18-2s10 8 14-6" fill="none" stroke="#ef4a36" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="64" cy="40" r="15" fill="#fffaf0" fill-opacity=".6" stroke="#23284d" stroke-width="4"/>
+        <path d="M75 51l12 12" stroke="#23284d" stroke-width="6" stroke-linecap="round"/>
+        <path d="M59.5 35.5c0-3 2.2-5 5-5s4.8 2 4.8 4.4c0 3.6-4.6 3.6-4.6 7.2" fill="none" stroke="#2f62e6" stroke-width="3" stroke-linecap="round"/><circle cx="64.7" cy="46.6" r="1.8" fill="#2f62e6"/>
+      </symbol>
+      <symbol id="art-album" viewBox="0 0 96 72">
+        <g transform="rotate(-8 40 40)"><rect x="12" y="20" width="56" height="40" rx="3" fill="#ffcd3c" stroke="#23284d" stroke-width="3.5"/></g>
+        <rect x="24" y="14" width="58" height="42" rx="3" fill="#fffaf0" stroke="#23284d" stroke-width="3.5"/>
+        <path d="M25 16l28 20 28-20" fill="none" stroke="#23284d" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M70 50c-4-3-9-6-9-10 0-2.5 2-4 4-4 2 0 3.5 1.2 5 3 1.5-1.8 3-3 5-3s4 1.5 4 4c0 4-5 7-9 10z" fill="#ff78ad" stroke="#23284d" stroke-width="3" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="art-envelope" viewBox="0 0 200 150">
+        <path d="M20 54h160v84H20z" fill="#efe1c2" stroke="#23284d" stroke-width="5" stroke-linejoin="round"/>
+        <g class="letter"><rect x="38" y="26" width="124" height="86" rx="4" fill="#fffaf0" stroke="#23284d" stroke-width="4.5"/><path d="M54 48h70M54 62h88M54 76h52" stroke="#9fd4ff" stroke-width="4" stroke-linecap="round"/><path d="M56 46c6-7 9 4 15-1s9 5 15 0" fill="none" stroke="#ef4a36" stroke-width="4" stroke-linecap="round"/></g>
+        <path d="M20 138l64-48M180 138l-64-48" stroke="#23284d" stroke-width="4" stroke-linecap="round" opacity=".5"/>
+        <path d="M20 54l80 56 80-56v84H20z" fill="#f6ead0" stroke="#23284d" stroke-width="5" stroke-linejoin="round"/>
+        <path class="flap" d="M20 54l80 56 80-56z" fill="#e8d6b0" stroke="#23284d" stroke-width="5" stroke-linejoin="round"/>
+        <g transform="rotate(6 156 112)"><rect x="140" y="98" width="30" height="34" rx="2" fill="#2f62e6" stroke="#23284d" stroke-width="3.5"/><rect x="145" y="103" width="20" height="24" fill="#9fd4ff" stroke="#23284d" stroke-width="2"/></g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="airmail-top" aria-hidden="true"></div>
 
   <!-- KOPFZEILE -->
   <header class="hdr" id="hdr">
     <a class="back-zb" href="../../" id="zbBack">← Zockbox</a>
     <div class="hdr-mid" id="hdrMid">
-      <span class="hdr-step hidden" id="hdrStep"></span>
-      <span class="hdr-title" id="hdrTitle"></span>
+      <a class="mini-logo" href="./" id="miniLogo" aria-label="Krakelpost"><svg class="mini-emb"><use href="#art-emblem"/></svg><span>Krakel<b>post</b></span></a>
+      <span class="hdr-title hidden" id="hdrTitle"></span>
     </div>
     <div class="hdr-right">
-      <button class="icon-btn" id="soundBtn" type="button" aria-label="Ton an/aus">🔊</button>
-      <button class="icon-btn hidden" id="leaveBtn" type="button" aria-label="Lobby verlassen">🚪</button>
+      <button class="icon-btn hidden" id="chatFab" type="button" aria-label="Chat öffnen" title="Chat"><svg class="ico"><use href="#i-chat"/></svg><span class="badge hidden" id="chatBadge">0</span></button>
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="Ton an/aus"><svg class="ico"><use href="#i-sound"/></svg></button>
+      <button class="icon-btn hidden" id="leaveBtn" type="button" aria-label="Lobby verlassen" title="Lobby verlassen"><svg class="ico"><use href="#i-door"/></svg></button>
     </div>
-    <div class="timer hidden" id="timer"><div class="timer-fill" id="timerFill"></div><span class="timer-txt" id="timerTxt"></span></div>
   </header>
 
   <main class="main" id="main">
@@ -42,81 +132,80 @@
     <!-- START -->
     <section id="scr-start" class="screen">
       <div class="hero">
-        <div class="stamp" aria-hidden="true"><span>✏️</span></div>
+        <svg class="hero-emb" aria-hidden="true"><use href="#art-emblem"/></svg>
         <h1 class="logo" aria-label="Krakelpost"><span class="l1">Krakel</span><span class="l2">post</span></h1>
-        <p class="tagline">Stille Post mit Zeichnungen. Schreiben, krakeln, raten – und am Ende lachen.</p>
+        <p class="tagline"><span>Stille Post mit Zeichnungen</span></p>
       </div>
 
-      <div class="card profile-card">
-        <h2 class="card-h">Avatar und Nickname auswählen</h2>
-        <div class="prof-row">
-          <button class="avatar-big" id="avatarBtn" type="button" aria-label="Avatar ändern"><span id="avatarEmoji">🐸</span><i>✎</i></button>
-          <div class="name-wrap">
-            <input id="nameInput" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false" enterkeyhint="done">
-            <button class="dice" id="diceBtn" type="button" aria-label="Zufälliger Name">🎲</button>
+      <div class="postcard start-card">
+        <div class="pcard-side me-side">
+          <h2 class="side-h">Avatar und Nickname auswählen</h2>
+          <div class="me-row">
+            <button class="sav big" id="avatarBtn" type="button" aria-label="Avatar ändern"><i><b id="avatarEmoji">🐸</b></i><em class="sav-edit"><svg class="ico"><use href="#i-pen"/></svg></em></button>
+            <div class="name-line">
+              <label for="nameInput" class="lbl">Absender</label>
+              <div class="name-wrap">
+                <input id="nameInput" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false" enterkeyhint="done">
+                <button class="dice" id="diceBtn" type="button" aria-label="Zufälliger Name" title="Zufälliger Name"><svg class="ico"><use href="#i-dice"/></svg></button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="play-grid">
-        <button class="play-card quick" id="quickBtn" type="button">
-          <span class="pc-ico" aria-hidden="true">⚡</span>
-          <span class="pc-t">Schnelles Spiel</span>
-          <span class="pc-s">Rein in eine offene Lobby</span>
-        </button>
-        <button class="play-card host" id="createBtn" type="button">
-          <span class="pc-ico" aria-hidden="true">🏠</span>
-          <span class="pc-t">Lobby erstellen</span>
-          <span class="pc-s">Privat, mit Code für Freunde</span>
-        </button>
-      </div>
-
-      <form class="card code-card" id="codeForm" autocomplete="off">
-        <h2 class="card-h">Mit Code beitreten</h2>
-        <div class="code-row">
-          <input id="codeInput" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
-          <button class="btn lime" id="codeBtn" type="submit">Beitreten</button>
+        <div class="pcard-side play-side">
+          <svg class="pc-postmark" aria-hidden="true"><use href="#art-postmark"/></svg>
+          <button class="btn red huge" id="createBtn" type="button"><span>Start</span><small>Private Lobby erstellen</small></button>
+          <button class="btn yellow wide" id="quickBtn" type="button"><svg class="ico"><use href="#i-bolt"/></svg>Schnelles Spiel</button>
+          <form class="code-form" id="codeForm" autocomplete="off">
+            <input id="codeInput" type="text" maxlength="4" placeholder="CODE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
+            <button class="btn blue" id="codeBtn" type="submit">Beitreten</button>
+          </form>
+          <button class="link-btn" id="browseBtn" type="button"><svg class="ico"><use href="#i-globe"/></svg>Öffentliche Lobbys ansehen</button>
         </div>
-      </form>
-      <button class="link-btn" id="browseBtn" type="button">🌐 Öffentliche Lobbys ansehen</button>
+      </div>
 
       <section class="howto" id="howto">
         <h2 class="sec-h">Spielanleitung</h2>
         <ol class="steps">
-          <li><b>1. Sprechen ist besser</b><span>Lade deine Freunde zu einem Sprachanruf ein (z. B. Discord) – oder sitzt zusammen.</span></li>
-          <li><b>2. Zeit zum Schreiben</b><span>Jeder Spieler muss einen lustigen Satz schreiben.</span></li>
-          <li><b>3. Zeit zum Zeichnen</b><span>Du bekommst einen schrägen Satz von jemand anderem zum Zeichnen.</span></li>
-          <li><b>4. Was ist das?</b><span>Versuche, eine der verrückten Zeichnungen zu beschreiben.</span></li>
-          <li><b>5. Schau, was passiert</b><span>Am Ende zeigt der Spielleiter jedes Album Schritt für Schritt. Liken, lachen, herunterladen.</span></li>
+          <li><svg class="st-art"><use href="#art-talk"/></svg><b>Sprechen ist besser</b><span>Ruft euch an (z. B. Discord) – oder sitzt zusammen. Lachen ist Pflicht.</span></li>
+          <li><svg class="st-art"><use href="#art-write"/></svg><b>Zeit zum Schreiben</b><span>Jeder Spieler muss einen lustigen Satz schreiben.</span></li>
+          <li><svg class="st-art"><use href="#art-draw"/></svg><b>Zeit zum Zeichnen</b><span>Du bekommst einen schrägen Satz von jemand anderem und musst ihn zeichnen.</span></li>
+          <li><svg class="st-art"><use href="#art-guess"/></svg><b>Was ist das?</b><span>Versuche, eine der verrückten Zeichnungen zu beschreiben.</span></li>
+          <li><svg class="st-art"><use href="#art-album"/></svg><b>Schau, was passiert</b><span>Am Ende werden alle Alben zugestellt – Schritt für Schritt. Liken, lachen, speichern.</span></li>
         </ol>
-        <details class="faq"><summary>Welche Modi gibt es?</summary><p>Normal, Imitation, Animation, Eisbrecher, Fremdkörper, Ergänzen, Meisterwerk, Story, Fehlendes Teil, Geheimnis, Koop, Punkte, Sandwich, Hintergrund, Solo – dazu Speedrun und Kein Druck. Der Spielleiter wählt in der Lobby unter „Voreinstellungen“.</p></details>
-        <details class="faq"><summary>Wie viele können mitspielen?</summary><p>2 bis 30. Standard ist 10 – der Spielleiter kann das ändern. Wer mitten im Spiel kommt, schaut zu und ist im nächsten Spiel dabei.</p></details>
+        <details class="faq"><summary>Welche Modi gibt es?</summary><p>Normal, Imitation, Animation, Eisbrecher, Fremdkörper, Ergänzen, Meisterwerk, Story, Fehlendes Teil, Geheimnis, Koop, Punkte, Sandwich, Hintergrund, Solo, Speedrun, Kein Druck – und „Eigener“, wo du alles frei kombinierst. Der Spielleiter wählt in der Lobby.</p></details>
+        <details class="faq"><summary>Wie viele können mitspielen?</summary><p>2 bis 30 (Solo und Meisterwerk auch allein). Standard ist 10. Wer mitten im Spiel kommt, schaut zu und ist im nächsten Spiel dabei.</p></details>
         <details class="faq"><summary>Brauche ich ein Konto?</summary><p>Nein. Die Daten laufen direkt zwischen euren Geräten (WebRTC). Es gibt keinen Server, der mitliest.</p></details>
       </section>
-      <footer class="foot"><b>made by Oskar</b><span>Krakelpost · ein Spiel in der <a href="../../">Zockbox</a> · GIF-Export mit omggif (MIT) · Schriften: Unbounded &amp; Inter (SIL OFL)</span></footer>
+      <footer class="foot"><b>made by Oskar</b><span>Krakelpost · ein Spiel in der <a href="../../">Zockbox</a></span><span class="credits">Schriften: Gochi Hand, Kalam, Nunito (SIL OFL) · Special Elite (Apache 2.0) · GIF: omggif (MIT)</span></footer>
     </section>
 
     <!-- EINLADUNG -->
     <section id="scr-invite" class="screen hidden">
-      <div class="card invite-card">
-        <div class="stamp small" aria-hidden="true"><span>💌</span></div>
-        <h2 class="invite-h">Post für dich! Du wurdest in eine Lobby eingeladen.</h2>
-        <div class="prof-row center">
-          <button class="avatar-big" id="avatarBtn2" type="button" aria-label="Avatar ändern"><span id="avatarEmoji2">🐸</span><i>✎</i></button>
-          <div class="name-wrap">
-            <input id="nameInput2" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false">
-            <button class="dice" id="diceBtn2" type="button" aria-label="Zufälliger Name">🎲</button>
+      <div class="invite">
+        <div class="inv-env" aria-hidden="true"><svg><use href="#art-envelope"/></svg></div>
+        <div class="postcard invite-card">
+          <p class="inv-kicker">Post für dich!</p>
+          <h2 class="invite-h">Du wurdest in eine Lobby eingeladen.</h2>
+          <div class="me-row center">
+            <button class="sav big" id="avatarBtn2" type="button" aria-label="Avatar ändern"><i><b id="avatarEmoji2">🐸</b></i><em class="sav-edit"><svg class="ico"><use href="#i-pen"/></svg></em></button>
+            <div class="name-line">
+              <label for="nameInput2" class="lbl">Absender</label>
+              <div class="name-wrap">
+                <input id="nameInput2" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false">
+                <button class="dice" id="diceBtn2" type="button" aria-label="Zufälliger Name"><svg class="ico"><use href="#i-dice"/></svg></button>
+              </div>
+            </div>
           </div>
+          <button class="btn red huge" id="inviteJoinBtn" type="button"><span>Start</span></button>
+          <button class="link-btn" id="inviteBack" type="button">Zurück</button>
         </div>
-        <button class="btn lime big" id="inviteJoinBtn" type="button">Start</button>
-        <button class="link-btn" id="inviteBack" type="button">Zurück</button>
       </div>
     </section>
 
     <!-- ÖFFENTLICHE LOBBYS -->
     <section id="scr-public" class="screen hidden">
-      <div class="card">
-        <div class="row-between"><h2 class="card-h">Öffentliche Lobbys</h2><button class="btn small ghost" id="refreshBtn" type="button">↻ Neu laden</button></div>
+      <div class="sheet pub-sheet">
+        <div class="row-between"><h2 class="sheet-h">Öffentliche Lobbys</h2><button class="btn small" id="refreshBtn" type="button"><svg class="ico"><use href="#i-refresh"/></svg>Neu laden</button></div>
         <div id="browseList" class="browse-list"></div>
       </div>
       <button class="link-btn" data-go="start" type="button">Zurück</button>
@@ -125,22 +214,22 @@
     <!-- LOBBY -->
     <section id="scr-lobby" class="screen hidden">
       <div class="lobby">
-        <div class="card players-card">
-          <div class="row-between"><h2 class="card-h">Spieler <span id="pCount">1/10</span></h2><span class="code-pill" id="codePill" title="Code antippen zum Kopieren"></span></div>
-          <div class="player-grid" id="playerGrid"></div>
+        <aside class="sheet players-sheet">
+          <div class="row-between"><h2 class="sheet-h">Spieler <span class="cnt" id="pCount">1/10</span></h2><button class="code-tag" id="codePill" type="button" title="Code kopieren"></button></div>
+          <ul class="player-list" id="playerGrid"></ul>
           <div class="invite-row">
-            <button class="btn violet" id="inviteBtn" type="button">🔗 Einladen</button>
-            <button class="btn ghost" id="qrHint" type="button">Code zeigen</button>
+            <button class="btn blue" id="inviteBtn" type="button"><svg class="ico"><use href="#i-link"/></svg>Einladen</button>
+            <button class="btn" id="qrHint" type="button"><svg class="ico"><use href="#i-qr"/></svg>QR-Code</button>
           </div>
-        </div>
+        </aside>
 
-        <div class="card set-card">
-          <p class="guest-wait hidden" id="guestWait">Warten, bis der Leiter das Spiel eingerichtet und gestartet hat ;)</p>
+        <div class="sheet set-sheet">
           <div class="tabs" id="lobbyTabs" role="tablist">
             <button class="tab on" data-tab="modes" type="button" role="tab">Voreinstellungen</button>
             <button class="tab" data-tab="settings" type="button" role="tab">Einstellungen</button>
           </div>
           <div id="tab-modes" class="tab-body">
+            <div class="mode-info" id="modeInfo"></div>
             <div class="mode-grid" id="modeGrid"></div>
           </div>
           <div id="tab-settings" class="tab-body hidden">
@@ -149,43 +238,56 @@
         </div>
       </div>
       <div class="start-bar" id="startBar">
+        <p class="guest-wait hidden" id="guestWait">Warten, bis der Leiter das Spiel eingerichtet und gestartet hat ;)</p>
         <div class="sb-info" id="sbInfo"></div>
-        <button class="btn lime big" id="startBtn" type="button">Start</button>
+        <button class="btn red big" id="startBtn" type="button"><span>Start</span></button>
       </div>
     </section>
 
-    <!-- SPIEL: AUFGABE -->
+    <!-- SPIEL -->
     <section id="scr-play" class="screen hidden">
-      <div class="task" id="task">
-        <div class="task-head" id="taskHead">
+      <div class="play-top">
+        <div class="round-stamp" id="roundStamp"><small>Runde</small><b id="roundNum">1/3</b></div>
+        <div class="pt-mid">
           <div class="th-kicker" id="thKicker"></div>
-          <div class="th-title" id="thTitle"></div>
+          <h2 class="th-title" id="thTitle"></h2>
         </div>
+        <div class="pm-timer hidden" id="timer" aria-live="off">
+          <svg viewBox="0 0 64 64" class="pm-ring"><circle cx="32" cy="32" r="27" class="pm-bg"/><circle cx="32" cy="32" r="27" class="pm-fill" id="timerFill" pathLength="100"/><circle cx="32" cy="32" r="21" class="pm-in"/></svg>
+          <span class="pm-txt" id="timerTxt"></span>
+          <svg class="pm-waves" viewBox="0 0 40 30" aria-hidden="true"><path d="M2 6c5-4 9 4 14 0s9 4 14 0 7 3 8 1M2 15c5-4 9 4 14 0s9 4 14 0 7 3 8 1M2 24c5-4 9 4 14 0s9 4 14 0 7 3 8 1"/></svg>
+        </div>
+      </div>
 
+      <div class="task" id="task">
         <!-- Vorgabe -->
         <div class="prompt hidden" id="prompt"><span class="pr-from" id="prFrom"></span><p class="pr-text" id="prText"></p></div>
         <div class="ref hidden" id="ref">
-          <img id="refImg" alt="Zeichnung, die du beschreiben sollst">
+          <img id="refImg" alt="Zeichnung">
           <span class="ref-from" id="refFrom"></span>
         </div>
-        <button class="btn pink big hidden" id="copyStartBtn" type="button">Zeichne es nach!</button>
+        <button class="btn red big hidden" id="copyStartBtn" type="button"><span>Zeichne es nach!</span></button>
 
         <!-- Schreiben -->
         <form class="write hidden" id="writeBox" autocomplete="off">
-          <div class="write-row">
-            <input id="writeInput" type="text" maxlength="120" placeholder="Schreib hier deinen Satz …" autocomplete="off" spellcheck="false" enterkeyhint="done">
-            <button class="dice" id="ideaBtn" type="button" aria-label="Idee würfeln" title="Idee würfeln">🎲</button>
+          <svg class="write-art" aria-hidden="true"><use href="#art-write"/></svg>
+          <div class="write-card">
+            <div class="write-row">
+              <input id="writeInput" type="text" maxlength="120" placeholder="Schreib hier deinen Satz …" autocomplete="off" spellcheck="false" enterkeyhint="done">
+              <button class="dice" id="ideaBtn" type="button" aria-label="Idee würfeln" title="Idee würfeln"><svg class="ico"><use href="#i-dice"/></svg></button>
+            </div>
+            <div class="write-meta"><span id="writeCount">0/120</span></div>
           </div>
-          <div class="write-meta"><span id="writeCount">0/120</span></div>
         </form>
 
         <!-- Zeichnen -->
         <div class="draw hidden" id="drawBox">
+          <div class="palette" id="palette"></div>
           <div class="board-wrap">
             <div class="board" id="board">
               <img class="layer under hidden" id="underImg" alt="">
               <img class="layer onion hidden" id="onionImg" alt="">
-              <canvas class="layer main" id="cvMain" width="800" height="600"></canvas>
+              <canvas class="layer ink" id="cvMain" width="800" height="600"></canvas>
               <canvas class="layer live" id="cvLive" width="800" height="600"></canvas>
               <div class="corpse-guide hidden" id="corpseGuide"><span class="cg-top"></span><span class="cg-bot"></span></div>
               <div class="secret-veil hidden" id="secretVeil"><span>🤫 Geheimnis – du siehst deine Striche nicht</span></div>
@@ -193,79 +295,90 @@
             </div>
           </div>
           <div class="tools" id="tools">
-            <div class="tool-row tools-main">
-              <button class="tool on" data-tool="pen" type="button" title="Stift (B)" aria-label="Stift">✏️</button>
-              <button class="tool" data-tool="eraser" type="button" title="Radierer (E)" aria-label="Radierer">🧽</button>
-              <button class="tool" data-tool="fill" type="button" title="Fülleimer (G)" aria-label="Fülleimer">🪣</button>
-              <button class="tool" data-tool="line" type="button" title="Linie (L)" aria-label="Linie">╱</button>
-              <button class="tool" data-tool="rect" type="button" title="Rechteck (R)" aria-label="Rechteck">▭</button>
-              <button class="tool" data-tool="ellipse" type="button" title="Kreis (O)" aria-label="Kreis">◯</button>
-              <span class="tool-sep"></span>
-              <button class="tool" id="undoBtn" type="button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↶</button>
-              <button class="tool" id="redoBtn" type="button" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">↷</button>
-              <button class="tool danger" id="clearBtn" type="button" title="Leeren" aria-label="Leeren">🗑️</button>
+            <button class="tool on" data-tool="pen" type="button" title="Stift (B)" aria-label="Stift"><svg class="ico"><use href="#i-pen"/></svg></button>
+            <button class="tool" data-tool="eraser" type="button" title="Radierer (E)" aria-label="Radierer"><svg class="ico"><use href="#i-eraser"/></svg></button>
+            <button class="tool" data-tool="fill" type="button" title="Fülleimer (G)" aria-label="Fülleimer"><svg class="ico"><use href="#i-fill"/></svg></button>
+            <button class="tool" data-tool="picker" type="button" title="Pipette (I)" aria-label="Pipette"><svg class="ico"><use href="#i-picker"/></svg></button>
+            <button class="tool" data-tool="line" type="button" title="Linie (L)" aria-label="Linie"><svg class="ico"><use href="#i-line"/></svg></button>
+            <button class="tool" data-tool="rect" type="button" title="Rechteck (R)" aria-label="Rechteck"><svg class="ico"><use href="#i-rect"/></svg></button>
+            <button class="tool" data-tool="rectf" type="button" title="Gefülltes Rechteck (Umschalt+R)" aria-label="Gefülltes Rechteck"><svg class="ico"><use href="#i-rectf"/></svg></button>
+            <button class="tool" data-tool="ellipse" type="button" title="Kreis (O)" aria-label="Kreis"><svg class="ico"><use href="#i-ellipse"/></svg></button>
+            <button class="tool" data-tool="ellipsef" type="button" title="Gefüllter Kreis (Umschalt+O)" aria-label="Gefüllter Kreis"><svg class="ico"><use href="#i-ellipsef"/></svg></button>
+          </div>
+          <div class="draw-foot" id="drawFoot">
+            <div class="sizes" id="sizeRow"></div>
+            <label class="opacity" title="Deckkraft"><span>Deckkraft</span><input type="range" id="opacityRange" min="15" max="100" step="5" value="100"></label>
+            <div class="hist" id="histRow">
+              <button class="tool" id="undoBtn" type="button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig"><svg class="ico"><use href="#i-undo"/></svg></button>
+              <button class="tool" id="redoBtn" type="button" title="Wiederholen (Strg+Y)" aria-label="Wiederholen"><svg class="ico"><use href="#i-redo"/></svg></button>
+              <button class="tool danger" id="clearBtn" type="button" title="Leeren" aria-label="Leeren"><svg class="ico"><use href="#i-trash"/></svg></button>
             </div>
-            <div class="tool-row sizes" id="sizeRow"></div>
-            <div class="tool-row palette" id="palette"></div>
-            <div class="tool-row extra">
-              <label class="opacity">Deckkraft <input type="range" id="opacityRange" min="15" max="100" step="5" value="100"></label>
+            <div class="hold hidden" id="holdRow" role="group" aria-label="Belichtung">
+              <span>Belichtung</span>
+              <button type="button" data-hold="1" class="on">1×</button><button type="button" data-hold="2">2×</button><button type="button" data-hold="3">3×</button><button type="button" data-hold="4">4×</button>
             </div>
           </div>
         </div>
 
-        <div class="task-foot">
-          <button class="btn lime big" id="doneBtn" type="button">Fertig!</button>
+        <div class="task-foot" id="taskFoot">
+          <button class="btn red big" id="doneBtn" type="button"><svg class="ico"><use href="#i-check"/></svg><span>Fertig!</span></button>
         </div>
       </div>
 
       <!-- Warten -->
       <div class="waiting hidden" id="waiting">
-        <div class="wait-art" aria-hidden="true"><span class="env">✉️</span></div>
-        <h2 id="waitTitle">Warte auf die anderen …</h2>
+        <div class="wait-art" aria-hidden="true"><svg><use href="#art-envelope"/></svg></div>
+        <h2 id="waitTitle">Warte auf die anderen Spieler …</h2>
         <p id="waitSub"></p>
         <div class="done-list" id="doneList"></div>
-        <button class="btn ghost" id="editBtn" type="button">✏️ Bearbeiten</button>
-        <button class="btn pink hidden" id="forceBtn" type="button">⏭ Runde jetzt beenden</button>
+        <div class="wait-btns">
+          <button class="btn" id="editBtn" type="button"><svg class="ico"><use href="#i-pen"/></svg>Bearbeiten</button>
+          <button class="btn yellow hidden" id="forceBtn" type="button"><svg class="ico"><use href="#i-next"/></svg>Runde jetzt beenden</button>
+        </div>
       </div>
     </section>
 
     <!-- ALBEN / PRÄSENTATION -->
     <section id="scr-album" class="screen hidden">
-      <div class="album-top">
-        <div class="album-who" id="albumWho"></div>
-        <div class="album-nav" id="albumNav"></div>
+      <div class="album-wrap">
+        <aside class="album-side" id="albumSide"></aside>
+        <div class="sheet album-sheet">
+          <div class="album-top">
+            <div class="album-who" id="albumWho"></div>
+            <div class="album-nav" id="albumNav"></div>
+          </div>
+          <div class="album" id="album"></div>
+        </div>
       </div>
-      <div class="album" id="album"></div>
       <div class="album-bar" id="albumBar">
-        <button class="btn ghost small" id="dlPngBtn" type="button">⤓ Bild</button>
-        <button class="btn ghost small" id="dlGifBtn" type="button">⤓ GIF</button>
-        <span class="grow"></span>
-        <button class="btn ghost small hidden" id="autoBtn" type="button">▶ Auto</button>
-        <button class="btn lime" id="nextBtn" type="button">Weiter ▸</button>
+        <button class="btn small" id="dlPngBtn" type="button"><svg class="ico"><use href="#i-dl"/></svg>Bild</button>
+        <button class="btn small" id="dlGifBtn" type="button"><svg class="ico"><use href="#i-dl"/></svg>GIF</button>
+        <span class="grow guest-note" id="albumGuest"></span>
+        <button class="btn small hidden" id="autoBtn" type="button"></button>
+        <button class="btn red" id="nextBtn" type="button">Weiter</button>
       </div>
     </section>
 
     <!-- ENDE -->
     <section id="scr-end" class="screen hidden">
       <div class="end-head">
-        <div class="stamp" aria-hidden="true"><span>📬</span></div>
+        <svg class="end-pm" aria-hidden="true"><use href="#art-postmark"/></svg>
         <h2 class="end-h">Alle Alben sind zugestellt!</h2>
       </div>
-      <div class="card score-card hidden" id="scoreCard"></div>
+      <div class="sheet score-sheet hidden" id="scoreCard"></div>
       <div class="album-list" id="albumList"></div>
       <div class="end-btns">
-        <button class="btn lime big" id="againBtn" type="button">Zurück zur Lobby</button>
+        <button class="btn red big" id="againBtn" type="button"><span>Zurück zur Lobby</span></button>
         <p class="end-note" id="endNote"></p>
       </div>
     </section>
   </main>
 
   <!-- CHAT -->
-  <button class="chat-fab hidden" id="chatFab" type="button" aria-label="Chat öffnen">💬<span class="badge hidden" id="chatBadge">0</span></button>
   <aside class="chat hidden" id="chat">
-    <div class="chat-head"><b>Chat</b><button class="icon-btn" id="chatClose" type="button" aria-label="Chat schließen">✕</button></div>
+    <div class="chat-head"><b>Chat</b><button class="icon-btn" id="chatClose" type="button" aria-label="Chat schließen"><svg class="ico"><use href="#i-close"/></svg></button></div>
     <div class="chat-log" id="chatLog"></div>
-    <form class="chat-form" id="chatForm" autocomplete="off"><input id="chatInput" type="text" maxlength="200" placeholder="Schreib was …"><button class="btn small lime" type="submit">Senden</button></form>
+    <form class="chat-form" id="chatForm" autocomplete="off"><input id="chatInput" type="text" maxlength="200" placeholder="Schreib was …"><button class="btn small blue" type="submit" aria-label="Senden"><svg class="ico"><use href="#i-send"/></svg></button></form>
   </aside>
 
   <div class="modal hidden" id="modal" role="dialog" aria-modal="true"><div class="modal-card" id="modalCard"></div></div>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360"><g fill="none" stroke="#2747c9" stroke-opacity=".3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+<!-- Stern -->
+<path d="M40 22 l7 15 16 2 -12 11 3 16 -14 -8 -14 8 3 -16 -12 -11 16 -2z"/>
+<!-- Spirale -->
+<path d="M150 50 a3 3 0 1 1 4 2 a8 8 0 1 1 -11 -5 a13 13 0 1 1 17 13 a18 18 0 1 1 -24 -16"/>
+<!-- Blitz -->
+<path d="M262 18 l-16 30 h14 l-10 28 26 -36 h-15 l11 -22z"/>
+<!-- Würfel -->
+<path d="M312 120 l22 -10 22 10 -22 10z M312 120 v24 l22 10 v-24 M356 120 v24 l-22 10"/>
+<!-- Boxhandschuh -->
+<path d="M60 150 q0 -22 22 -22 q24 0 24 24 q0 22 -20 24 h-14 q-12 -2 -12 -14z M66 176 h22 v14 h-22z M74 150 q6 -10 18 -6"/>
+<!-- Herz -->
+<path d="M200 170 c-18 -12 -14 -28 -2 -28 q6 0 8 7 q2 -7 8 -7 c12 0 16 16 -2 28 l-6 5z"/>
+<!-- Smiley -->
+<circle cx="290" cy="230" r="20"/><path d="M282 224 v2 M298 224 v2 M280 236 q10 9 20 0"/>
+<!-- Bleistift -->
+<path d="M30 300 l60 -34 8 14 -60 34z M38 314 l-14 6 2 -14 M84 270 l8 14"/>
+<!-- Wolke -->
+<path d="M150 300 q-16 0 -14 -14 q2 -12 16 -10 q4 -14 20 -12 q14 2 14 16 q14 0 14 12 q0 10 -14 10z"/>
+<!-- Pfeil -->
+<path d="M230 330 q30 -20 64 -6 M284 314 l12 10 -14 6"/>
+<!-- Krone -->
+<path d="M120 100 l6 -18 10 10 8 -14 8 14 10 -10 6 18z"/>
+<!-- Kringel -->
+<path d="M220 90 q10 -12 20 0 t20 0 t20 0"/>
+<!-- Ausrufezeichen -->
+<path d="M335 300 v18 M335 328 v1"/>
+<!-- Kreuz / Plus -->
+<path d="M120 220 v16 M112 228 h16 M20 220 l10 10 M30 220 l-10 10"/>
+<!-- VS -->
+<path d="M232 240 l8 18 8 -18 M266 242 q-10 -4 -12 4 q0 6 8 7 q8 2 6 8 q-3 6 -13 2"/>
+</g></svg>

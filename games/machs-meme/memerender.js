@@ -61,21 +61,29 @@ export function drawCaptions(ctx, W, H, boxes) {
   for (const b of boxes || []) {
     const text = String(b.text || '').trim();
     if (!text) continue;
-    const bx = (b.x / 100) * W, by = (b.y / 100) * H, bw = (b.w / 100) * W, bh = (b.h / 100) * H;
-    const { size, lines } = layoutCaption(ctx, text, bw, bh, Math.max(W, H) * 0.075);
+    const bw = (b.w / 100) * W, bh = (b.h / 100) * H;
+    const cx = (b.x / 100) * W + bw / 2, cy = (b.y / 100) * H + bh / 2;
+    const { size, lines } = layoutCaption(ctx, text, bw, bh, Math.min(Math.max(W, H) * 0.075, Math.min(W, H) * 0.14));
     ctx.font = F(size);
     const lh = size * LH;
-    let y = by + (bh - lines.length * lh) / 2 + lh / 2 + size * 0.04;
-    const cx = bx + bw / 2;
+    const textH = lines.length * lh;
+    // vertikale Ausrichtung im Feld: oben (t), unten (b) oder Mitte
+    const pad = bh * 0.02;
+    let top = b.v === 't' ? -bh / 2 + pad : b.v === 'b' ? bh / 2 - pad - textH : -textH / 2;
+    let y = top + lh / 2 + size * 0.04;
     const black = b.c === 'b';
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (b.r) ctx.rotate((b.r * Math.PI) / 180);
     ctx.lineWidth = Math.max(1.5, size * 0.15);
     ctx.strokeStyle = black ? '#ffffff' : '#000000';
     ctx.fillStyle = black ? '#000000' : '#ffffff';
     for (const line of lines) {
-      ctx.strokeText(line, cx, y);
-      ctx.fillText(line, cx, y);
+      ctx.strokeText(line, 0, y);
+      ctx.fillText(line, 0, y);
       y += lh;
     }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -110,7 +118,17 @@ export function renderMeme(el, tpl, boxes, opts = {}) {
   } else media = img;
   const loading = document.createElement('div');
   loading.className = 'loading'; loading.textContent = 'Wird geladen …';
-  img.addEventListener('load', () => { loading.remove(); el._draw && el._draw(); });
+  img.addEventListener('load', () => {
+    loading.remove();
+    // Falls die echte Bildgröße von den Vorlagen-Daten abweicht: echtes Seitenverhältnis nehmen
+    const nw = img.naturalWidth, nh = img.naturalHeight;
+    if (nw && nh && Math.abs(nw / nh - (tpl.w || 1) / (tpl.h || 1)) > 0.01) {
+      el.style.setProperty('--ar', String(nw / nh));
+      img.style.aspectRatio = `${nw} / ${nh}`;
+      if (media !== img) { media.width = nw; media.height = nh; media.style.aspectRatio = `${nw} / ${nh}`; try { media.getContext('2d').drawImage(img, 0, 0, nw, nh); } catch (e) {} }
+    }
+    el._draw && el._draw();
+  });
   img.addEventListener('error', () => { loading.textContent = 'Bild nicht erreichbar 😕'; });
   img.src = tpl.u;
   const cap = document.createElement('canvas');

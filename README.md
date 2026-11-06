@@ -24,10 +24,12 @@ Kein Konto, kein Download, keine Werbung. Lobby erstellen, 4-Buchstaben-Code an 
 - **Ein Profil für alle Spiele:** Name und Emoji-Avatar stellst du auf der Startseite unter „Dein Profil“ ein. Gespeichert wird nur in deinem Browser (`localStorage`: `ph_name`, `ph_avatar`).
 - **Mit Code beitreten:** Code auf der Startseite eintippen – die Zockbox sucht automatisch, in welchem Spiel die Lobby offen ist, und leitet dich hin (`games/<spiel>/?code=ABCD`). Klappt die Suche nicht, einfach das Spiel antippen.
 - **Einladungs-Link:** `https://oskar26.github.io/zockbox/?join=ABCD` füllt den Code auf der Startseite schon aus.
-- **Flüster-Intro:** Beim Öffnen der Startseite ein kurzes „psst…“ (ca. 2 s, einmal pro Tab). Antippen oder eine Taste überspringt es. Aus bei „Einstellungen → Intro beim Öffnen“ (`zb_intro = off`), bei *reduzierter Bewegung* im System und bei Einladungslinks (`?join=`).
+- **Look „Die Kiste“:** Die Startseite sieht aus wie ein Umzugskarton – Kraftpapier, Paketband, Stempel und Aufkleber. Jedes Spiel ist eine bunte Schachtel mit schwarzer Kontur und hartem Schatten, der Code wird auf einem „Frachtzettel“ in vier Buchstaben-Kacheln eingetippt, das Profil ist ein „Hallo, ich bin“-Namensschild.
+- **Flüster-Intro:** Beim Öffnen der Startseite geht kurz die Kiste auf und ein „psst…“ kommt heraus (ca. 2 s, einmal pro Tab). Antippen oder eine Taste überspringt es. Aus bei „Einstellungen → Intro beim Öffnen“ (`zb_intro = off`), bei *reduzierter Bewegung* im System und bei Einladungslinks (`?join=`).
 - **Tarnmodus (standardmäßig aus):** Unter *Dein Profil → Einstellungen* einschaltbar, gilt für die Startseite und alle Spiele, die `shared/tarnung.js` einbinden. Reine Oberflächen-Tarnung:
-  - *Tab-Tarnung:* Titel und Symbol des Browser-Tabs als „Notizen“, „Dokument – Unbenannt“, „Suche“, „Wiki-Artikel“ oder „Taschenrechner“ (eigene, selbst gezeichnete Symbole).
-  - *Panik-Taste:* Esc 2× schnell (Taste frei wählbar) oder der kleine Knopf unten links auf Handy/Tablet blendet eine Tarnseite ein: **Suche** („Suchfix“), **Lexikon-Artikel** (Photosynthese) oder **Dokument** (Bio-Notizen). Das Spiel läuft darunter weiter, die Verbindung bleibt. Zurück: dieselbe Taste 2× oder oben links 2× tippen.
+  - *Panik-Taste:* Esc 2× schnell (Taste frei wählbar) oder der kleine Knopf unten links auf Handy/Tablet blendet eine Tarnseite ein: **Suche** (Ergebnisseite zu „photosynthese“ im Stil einer bekannten Suchmaschine – eigene Suche, Startseite per Klick aufs Logo, Treffer öffnen den Lexikon-Artikel), **Lexikon-Artikel** (Photosynthese, Artikel-Layout im Stil einer freien Online-Enzyklopädie) oder **Dokument** (Bio-Notizen). Das Spiel läuft darunter weiter, die Verbindung bleibt. Zurück: dieselbe Taste 2× oder oben links 2× tippen.
+  - *Tab-Tarnung:* Standard ist **„Passend zur Tarnseite“** – Tab-Titel und Symbol passen automatisch zur gewählten Tarnseite (z. B. „Suche“ mit Lupen-Symbol). Wer eine andere Tarnseite wählt, bekommt wieder den passenden Tab. Danach lässt sich der Tab weiter von Hand ändern: „Original“, „Notizen“, „Dokument – Unbenannt“, „Suche“, „Lexikon“ oder „Taschenrechner“ (eigene, selbst gezeichnete Symbole).
+  - *Wichtig:* Die Tarnseiten benutzen bewusst **keine echten Logos und keine echten Markennamen** (nur „Suche“ und „Lexikon – Die freie Enzyklopädie“) und keine nachgebauten Schriftzüge – sonst könnte Google Safe Browsing die Seite als Phishing markieren. Bitte beim Ändern so lassen.
   - Gespeichert in `localStorage`: `zb_tarn_on`, `zb_tarn_tab`, `zb_tarn_page`, `zb_tarn_key`, `zb_tarn_fab`.
   - Einbinden in ein Spiel (eine Zeile, z. B. vor `</body>` in `games/<spiel>/index.html`):
     `<script type="module" src="../../shared/tarnung.js"></script>`
@@ -53,8 +55,8 @@ Die gemeinsame Netzwerk-Logik für alle Spiele steckt in `shared/net.js` (Klasse
 index.html             Startseite (Spielebibliothek): Spiele, Profil, Mit Code beitreten
 404.html               Fehlerseite („Level nicht gefunden“)
 manifest.webmanifest   App-Infos für „Zum Home-Bildschirm“
-assets/                App-Icons (PNG)
-shared/zockbox.css     Design der Startseite (dunkler Game-Library-Look)
+assets/                App-Icons (PNG) und assets/fonts/ (Permanent Marker für die Startseite)
+shared/zockbox.css     Teil A: Basis für Spiele (Reset, Schriften, alte zb-*-Bausteine) · Teil B: Startseite „Kiste“ (body.zx, zx-*-Klassen)
 shared/fonts/          Schriften (lokal, SIL Open Font License)
 shared/hub.js          Logik der Startseite (Intro, Profil, Einstellungen, Code-Suche, Install-Tipp)
 shared/tarnung.js      Tarnmodus (Tab-Tarnung + Panik-Taste), für Startseite und Spiele
@@ -94,6 +96,6 @@ python3 -m http.server 8000
 - [PeerJS](https://github.com/peers/peerjs) – MIT-Lizenz, inklusive des kostenlosen PeerJS-Cloud-Servers fürs Signaling
 - Meme-Vorlagen über die [imgflip](https://imgflip.com/)-API und [memegen.link](https://memegen.link/)
 - Artikel aus der [Wikipedia](https://de.wikipedia.org/) – Texte unter [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.de)
-- Schriften: Unbounded, Inter und Anton (Startseite) sowie Nunito und Permanent Marker (Spiele) – alle unter der SIL Open Font License, lokal in `shared/fonts/`
+- Schriften: Anton, Inter und Unbounded (Startseite bzw. Spiel-Basis, SIL Open Font License, `shared/fonts/`), Permanent Marker (Startseite, Apache License 2.0, `assets/fonts/`) sowie die Schriften in den Spiel-Ordnern – alles lokal, nichts von fremden Servern
 - Emojis: die Emoji-Schrift deines Geräts
 - Icons und Spiel-Cover: selbst gemacht (CSS/SVG)

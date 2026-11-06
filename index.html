@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Zockbox – Gratis Browser-Spiele mit Freunden</title>
   <meta name="description" content="Zockbox: kostenlose Multiplayer-Spiele im Browser – ohne Anmeldung, ohne Download. Made by Oskar.">
-  <meta name="theme-color" content="#0a0b12">
-  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#d8a96a">
+  <meta name="color-scheme" content="light">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Zockbox">
   <meta property="og:title" content="Zockbox – Gratis Browser-Spiele mit Freunden">
   <meta property="og:description" content="Lobby erstellen, Code teilen, zocken. Läuft auf Handy, iPad und Laptop.">
@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="preload" href="shared/fonts/Unbounded-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="shared/fonts/Anton-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="shared/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="shared/zockbox.css">
   <script>
@@ -35,210 +35,210 @@
     })();
   </script>
 </head>
-<body>
+<body class="zx">
+  <!-- Flüster-Intro: die Kiste geht auf, „psst…“ kommt raus -->
   <div class="zb-intro" id="zbIntro" aria-hidden="true">
-    <div class="zb-intro-in">
-      <svg class="zb-intro-face" viewBox="0 0 120 120" aria-hidden="true">
-        <defs><linearGradient id="zbIg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4fd8"/></linearGradient></defs>
-        <circle cx="60" cy="60" r="52" fill="url(#zbIg)"/>
-        <path d="M36 50q8-7 16 0M68 50q8-7 16 0" fill="none" stroke="#1a1030" stroke-width="5" stroke-linecap="round"/>
-        <path d="M46 82q14 6 28 0" fill="none" stroke="#1a1030" stroke-width="5" stroke-linecap="round"/>
-        <rect class="zb-intro-finger" x="53" y="62" width="14" height="44" rx="7" fill="#c6ff3d" stroke="#1a1030" stroke-width="3"/>
-      </svg>
-      <p class="zb-intro-psst"><span>p</span><span>s</span><span>s</span><span>t</span><span>…</span></p>
-      <p class="zb-intro-sub">die Zockbox ist offen</p>
+    <div class="zxi-stage">
+      <p class="zxi-psst"><span>p</span><span>s</span><span>s</span><span>t</span><span>…</span></p>
+      <div class="zxi-box">
+        <span class="zxi-flap zxi-flap-l"></span>
+        <span class="zxi-flap zxi-flap-r"></span>
+        <div class="zxi-front">
+          <span class="zxi-arrows">↑↑</span>
+          <span class="zxi-word">ZOCKBOX</span>
+        </div>
+      </div>
+      <p class="zxi-sub">die Zockbox ist offen</p>
     </div>
-    <span class="zb-intro-skip">Tippen zum Überspringen</span>
+    <span class="zxi-skip">Tippen zum Überspringen</span>
   </div>
-  <div class="zb-bg" aria-hidden="true"></div>
 
-  <header class="zb-top">
-    <div class="zb-wrap zb-top-in">
-      <a class="zb-brand" href="./" aria-label="Zockbox Startseite">
-        <span class="zb-mark" aria-hidden="true"><span>Z</span></span>
-        <span class="zb-brand-txt"><b>Zockbox</b><small>made by Oskar</small></span>
+  <header class="zx-top">
+    <div class="zx-wrap zx-top-in">
+      <a class="zx-brand" href="./" aria-label="Zockbox Startseite">
+        <span class="zx-logo" aria-hidden="true">Z</span>
+        <span class="zx-brand-txt">Zockbox</span>
       </a>
-      <a class="zb-me" href="#profil" id="zbMe" aria-label="Dein Profil">
-        <span class="zb-me-av" id="zbMeAv" aria-hidden="true">🐸</span>
-        <span class="zb-me-name" id="zbMeName">Profil</span>
+      <a class="zx-tag" href="#profil" id="zbMe" aria-label="Dein Profil">
+        <span class="zx-tag-hi">Hallo, ich bin</span>
+        <span class="zx-tag-me"><span class="zx-tag-av" id="zbMeAv" aria-hidden="true">🐸</span><span class="zx-tag-name" id="zbMeName">Profil</span></span>
       </a>
     </div>
   </header>
 
-  <main class="zb-wrap">
-    <div id="installHint" class="zb-install hidden" role="note">
-      <span class="zb-install-ic" aria-hidden="true">📲</span>
-      <p>Tipp: In Safari auf <b>Teilen</b> und dann <b>„Zum Home-Bildschirm“</b> – dann startet Zockbox wie eine App.</p>
-      <button id="installClose" class="zb-x" type="button" aria-label="Hinweis schließen">✕</button>
+  <main class="zx-wrap zx-main">
+    <div id="installHint" class="zx-install hidden" role="note">
+      <span class="zx-install-ic" aria-hidden="true">📲</span>
+      <p>Tipp: In Safari auf <b>Teilen</b> und dann <b>„Zum Home-Bildschirm“</b> – dann startet die Zockbox wie eine App.</p>
+      <button id="installClose" class="zx-x" type="button" aria-label="Hinweis schließen">✕</button>
     </div>
 
-    <section class="zb-hero">
-      <div class="zb-hero-text">
-        <div class="zb-kick-row"><span class="zb-kicker"><i class="zb-dot" aria-hidden="true"></i> 4 Spiele live · gratis</span><span class="zb-psst">🤫 psst… nur für deine Leute</span></div>
-        <h1>Zocken mit Freunden.<br><span class="zb-grad">Direkt im Browser.</span></h1>
-        <p class="zb-lead">Lobby erstellen, Code teilen, losspielen. Kein Konto, kein Download – bis zu 30 Leute pro Runde, auf Handy, iPad und Laptop.</p>
+    <section class="zx-hero">
+      <div class="zx-hero-text">
+        <div class="zx-stamps">
+          <span class="zx-stamp">Inhalt: 4 Spiele</span>
+          <span class="zx-stamp zx-stamp-red">Gratis</span>
+        </div>
+        <h1 class="zx-h1">Zocken mit Freunden.<br><mark>Direkt im</mark> <mark>Browser.</mark></h1>
+        <p class="zx-lead">Lobby erstellen, Code teilen, losspielen. Kein Konto, kein Download – bis zu 30 Leute pro Runde, auf Handy, iPad und Laptop.</p>
       </div>
 
-      <section class="zb-panel zb-join" id="beitreten" aria-labelledby="joinTitle">
-        <div class="zb-panel-head">
-          <h2 id="joinTitle">Mit Code beitreten</h2>
-          <span class="zb-hint">4 Buchstaben</span>
+      <section class="zx-label" id="beitreten" aria-labelledby="joinTitle">
+        <div class="zx-label-head">
+          <h2 id="joinTitle">Mit Code rein</h2>
+          <span class="zx-label-meta">4 Buchstaben</span>
         </div>
-        <form id="joinForm" autocomplete="off" novalidate>
-          <div class="zb-join-row">
-            <input id="joinCode" class="zb-code" type="text" inputmode="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
-            <button id="joinGo" class="zb-btn zb-btn-primary" type="submit">Los</button>
+        <form id="joinForm" class="zx-label-body" autocomplete="off" novalidate>
+          <div class="zx-join-row">
+            <label class="zx-tiles" for="joinCode">
+              <input id="joinCode" class="zx-code" type="text" inputmode="text" maxlength="4" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
+              <span class="zx-tile" aria-hidden="true"></span><span class="zx-tile" aria-hidden="true"></span><span class="zx-tile" aria-hidden="true"></span><span class="zx-tile" aria-hidden="true"></span>
+            </label>
+            <button id="joinGo" class="zx-go" type="submit">Los</button>
           </div>
-          <div id="joinGame" class="zb-chips" role="group" aria-label="Spiel auswählen">
-            <button type="button" class="zb-chip" data-game="auto" title="Spiel automatisch erkennen">✨ Auto</button>
-            <button type="button" class="zb-chip" data-game="machs-meme">Mach's Meme</button>
-            <button type="button" class="zb-chip" data-game="wikirennen">Wikirennen</button>
-            <button type="button" class="zb-chip" data-game="kritzel-duell">Kritzel-Duell</button>
-            <button type="button" class="zb-chip" data-game="krakelpost">Krakelpost</button>
+          <div id="joinGame" class="zx-chips" role="group" aria-label="Spiel auswählen">
+            <button type="button" class="zx-chip" data-game="auto" title="Spiel automatisch erkennen">Auto</button>
+            <button type="button" class="zx-chip" data-game="machs-meme">Mach's Meme</button>
+            <button type="button" class="zx-chip" data-game="wikirennen">Wikirennen</button>
+            <button type="button" class="zx-chip" data-game="kritzel-duell">Kritzel-Duell</button>
+            <button type="button" class="zx-chip" data-game="krakelpost">Krakelpost</button>
           </div>
-          <p id="joinStatus" class="zb-status hidden" aria-live="polite"></p>
+          <p id="joinStatus" class="zx-status hidden" aria-live="polite"></p>
         </form>
       </section>
     </section>
 
-    <div class="zb-sec-head">
-      <h2>Bibliothek</h2>
-      <span class="zb-hint">Tipp auf ein Spiel zum Starten</span>
+    <div class="zx-sec">
+      <h2>In der Kiste</h2>
+      <span class="zx-sec-note">Tipp auf eine Schachtel</span>
     </div>
 
-    <section class="zb-games" aria-label="Spiele">
-      <a class="zb-game" href="games/machs-meme/">
-        <div class="zb-cover zb-cover-meme" aria-hidden="true">
-          <div class="meme-frame">
-            <span class="meme-top">WENN DER CODE</span>
-            <span class="meme-face">😂</span>
-            <span class="meme-bot">SOFORT KLAPPT</span>
+    <section class="zx-shelf" aria-label="Spiele">
+      <a class="zx-box zx-c-meme" href="games/machs-meme/">
+        <div class="zx-lid" aria-hidden="true">
+          <div class="zx-meme">
+            <span class="zx-meme-t">WENN DER CODE</span>
+            <span class="zx-meme-f">😂</span>
+            <span class="zx-meme-b">SOFORT KLAPPT</span>
           </div>
-          <span class="zb-cover-burst">LOL</span>
+          <span class="zx-pop">LOL</span>
         </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Party</span></div>
+        <div class="zx-box-body">
+          <span class="zx-live">Live</span>
           <h3>Mach's Meme</h3>
-          <p>Alle bekommen dieselbe Meme-Vorlage, jeder schreibt die witzigste Caption – dann wird abgestimmt.</p>
-          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+          <p>Alle bekommen dieselbe Vorlage – die witzigste Caption gewinnt.</p>
+          <div class="zx-box-foot"><span class="zx-players">2–30</span><span class="zx-play">Spielen</span></div>
         </div>
       </a>
 
-      <a class="zb-game" href="games/wikirennen/">
-        <div class="zb-cover zb-cover-wiki" aria-hidden="true">
-          <svg class="wiki-net" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
-            <g class="wiki-lines">
-              <path d="M40 150 L110 90 L180 120 L250 50"/>
-              <path d="M110 90 L150 40"/><path d="M180 120 L230 165"/><path d="M40 150 L95 175"/><path d="M180 120 L210 75"/>
-            </g>
-            <path class="wiki-route" d="M40 150 L110 90 L180 120 L250 50"/>
-            <g class="wiki-nodes">
-              <circle cx="150" cy="40" r="5"/><circle cx="230" cy="165" r="5"/><circle cx="95" cy="175" r="5"/><circle cx="210" cy="75" r="5"/>
-              <circle class="hot" cx="110" cy="90" r="7"/><circle class="hot" cx="180" cy="120" r="7"/>
-              <circle class="start" cx="40" cy="150" r="10"/><circle class="goal" cx="250" cy="50" r="12"/>
-            </g>
+      <a class="zx-box zx-c-wiki" href="games/wikirennen/">
+        <div class="zx-lid" aria-hidden="true">
+          <svg class="zx-wiki-net" viewBox="0 0 320 240" preserveAspectRatio="xMidYMid slice">
+            <g class="l"><path d="M40 190 L110 120 L180 150 L262 66"/><path d="M110 120 L150 54"/><path d="M180 150 L236 206"/><path d="M40 190 L100 222"/><path d="M180 150 L214 96"/></g>
+            <path class="r" d="M40 190 L110 120 L180 150 L262 66"/>
+            <g class="n"><circle cx="150" cy="54" r="7"/><circle cx="236" cy="206" r="7"/><circle cx="100" cy="222" r="7"/><circle cx="214" cy="96" r="7"/><circle cx="110" cy="120" r="9"/><circle cx="180" cy="150" r="9"/></g>
+            <circle class="s" cx="40" cy="190" r="13"/><circle class="g" cx="262" cy="66" r="15"/>
           </svg>
-          <span class="wiki-w">W</span>
-          <span class="wiki-flag">🏁</span>
+          <span class="zx-wiki-a">Pizza</span>
+          <span class="zx-wiki-b">Mond</span>
         </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Rennen</span></div>
+        <div class="zx-box-body">
+          <span class="zx-live">Live</span>
           <h3>Wikirennen</h3>
-          <p>Von „Pizza“ zu „Mond“ – nur über Links in Wikipedia. Wer findet den Weg und ist zuerst am Ziel?</p>
-          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+          <p>Von „Pizza“ zu „Mond“ – nur über Links. Wer ist zuerst am Ziel?</p>
+          <div class="zx-box-foot"><span class="zx-players">2–30</span><span class="zx-play">Spielen</span></div>
         </div>
       </a>
 
-      <a class="zb-game" href="games/kritzel-duell/">
-        <div class="zb-cover zb-cover-draw" aria-hidden="true">
-          <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice"><path d="M20 90 C40 20, 70 20, 80 60 S120 110, 140 50 S175 20, 185 70" /><path class="b" d="M30 30 q20 20 40 0 t40 0" /></svg>
-          <span class="draw-word">K _ T Z _</span>
-          <span class="draw-pen">✏️</span>
+      <a class="zx-box zx-c-draw" href="games/kritzel-duell/">
+        <div class="zx-lid" aria-hidden="true">
+          <svg class="zx-scribble" viewBox="0 0 200 150" preserveAspectRatio="xMidYMid slice"><path d="M22 118 C40 40, 76 36, 88 82 S128 136, 148 66 S180 34, 188 92"/><path class="b" d="M34 46 q18 18 36 0 t36 0"/></svg>
+          <span class="zx-word">K _ T Z _</span>
+          <span class="zx-pen">✏️</span>
         </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Zeichnen</span></div>
+        <div class="zx-box-body">
+          <span class="zx-live">Live</span>
           <h3>Kritzel-Duell</h3>
-          <p>Einer zeichnet, alle raten. Wer das Gekritzel zuerst erkennt, kassiert die meisten Punkte.</p>
-          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+          <p>Einer zeichnet, alle raten. Wer's zuerst erkennt, holt die Punkte.</p>
+          <div class="zx-box-foot"><span class="zx-players">2–30</span><span class="zx-play">Spielen</span></div>
         </div>
       </a>
 
-      <a class="zb-game" href="games/krakelpost/">
-        <div class="zb-cover zb-cover-post" aria-hidden="true">
-          <div class="post-chain">
-            <span class="post-card c1">„Katze auf Skateboard“</span>
-            <span class="post-arrow">→</span>
-            <span class="post-card c2"><svg viewBox="0 0 60 44"><path d="M8 34h44M14 34a3 3 0 1 0 0 .1M46 34a3 3 0 1 0 0 .1M20 30c0-8 6-14 13-14s11 5 11 12M24 18l-3-8 7 5M38 16l4-7 1 9" /></svg></span>
-            <span class="post-arrow">→</span>
-            <span class="post-card c3">„Hund im Auto?“</span>
+      <a class="zx-box zx-c-post" href="games/krakelpost/">
+        <div class="zx-lid" aria-hidden="true">
+          <div class="zx-chain">
+            <span class="zx-card k1">„Katze auf Skate&shy;board“</span>
+            <span class="zx-card k2"><svg viewBox="0 0 60 44"><path d="M8 34h44M14 34a3 3 0 1 0 0 .1M46 34a3 3 0 1 0 0 .1M20 30c0-8 6-14 13-14s11 5 11 12M24 18l-3-8 7 5M38 16l4-7 1 9"/></svg></span>
+            <span class="zx-card k3">„Hund im Auto?“</span>
           </div>
-          <span class="post-env">✉️</span>
         </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Party</span></div>
+        <div class="zx-box-body">
+          <span class="zx-live">Live</span>
           <h3>Krakelpost</h3>
-          <p>Stille Post mit Zeichnen: Satz wird Bild, Bild wird Satz – und am Ende kommt was völlig anderes raus.</p>
-          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+          <p>Stille Post mit Zeichnen: Satz wird Bild, Bild wird Satz.</p>
+          <div class="zx-box-foot"><span class="zx-players">2–30</span><span class="zx-play">Spielen</span></div>
         </div>
       </a>
-    </section>
 
-    <div class="zb-sec-head">
-      <h2>Bald in der Box</h2>
-    </div>
-    <section class="zb-soon" aria-label="Bald verfügbar">
-      <div class="zb-game zb-small" aria-disabled="true">
-        <div class="zb-cover zb-cover-lie" aria-hidden="true">
-          <span class="lie-q q1">?</span><span class="lie-q q2">?</span><span class="lie-q q3">?</span>
-          <span class="lie-mask">🕵️</span>
+      <div class="zx-box zx-box-soon zx-c-lie" aria-disabled="true">
+        <div class="zx-lid" aria-hidden="true">
+          <span class="zx-q q1">?</span><span class="zx-q q2">?</span><span class="zx-q q3">?</span>
+          <span class="zx-spy">🕵️</span>
+          <span class="zx-tape t1"></span><span class="zx-tape t2"></span>
         </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-bald">BALD</span></div>
+        <div class="zx-box-body">
           <h3>Wer lügt?</h3>
           <p>Alle kennen das Wort – nur einer nicht. Findet den Bluffer.</p>
         </div>
+        <span class="zx-soon-stamp">Bald</span>
       </div>
     </section>
 
-    <div class="zb-lower">
-    <section class="zb-panel zb-profile" id="profil" aria-labelledby="profTitle">
-      <div class="zb-panel-head">
-        <h2 id="profTitle">Dein Profil</h2>
-        <span id="phSaved" class="zb-saved" aria-live="polite">✓ gespeichert</span>
-      </div>
-      <div class="zb-prof-row">
-        <button id="phAvatar" class="zb-avatar" type="button" aria-label="Avatar auswählen" aria-expanded="false" aria-controls="phAvatarGrid">🐸</button>
-        <input id="phName" class="zb-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="nickname" enterkeyhint="done" aria-label="Dein Name">
-        <button id="phDice" class="zb-btn zb-btn-ghost zb-dice" type="button" title="Zufälliger Name und Avatar" aria-label="Zufälliger Name und Avatar">🎲</button>
-      </div>
-      <div id="phAvatarGrid" class="zb-avatar-grid hidden" role="group" aria-label="Avatare"></div>
-      <p class="zb-hint zb-prof-foot">Gilt für alle Spiele und bleibt nur auf diesem Gerät. Tipp auf den Avatar zum Ändern.</p>
-
-      <details class="zb-settings" id="einstellungen">
-        <summary><span>⚙️ Einstellungen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></summary>
-        <div class="zb-set-body">
-          <div class="zb-set-row">
-            <div class="zb-set-txt"><b>Intro beim Öffnen</b><span>Das kurze „psst…“ beim Start der Startseite.</span></div>
-            <button type="button" class="zb-switch" role="switch" id="zbIntroOn" aria-checked="true" aria-label="Intro beim Öffnen"><i></i></button>
-          </div>
-          <div id="zbTarnSettings" class="zb-tarn-set"></div>
+    <div class="zx-lower">
+      <section class="zx-sheet zx-profile" id="profil" aria-labelledby="profTitle">
+        <div class="zx-sheet-head">
+          <h2 id="profTitle">Dein Profil</h2>
+          <span id="phSaved" class="zx-saved" aria-live="polite">✓ gespeichert</span>
         </div>
-      </details>
-    </section>
+        <div class="zx-nametag">
+          <div class="zx-nametag-hi"><b>Hallo</b><span>ich bin</span></div>
+          <div class="zx-prof-row">
+            <button id="phAvatar" class="zx-avatar" type="button" aria-label="Avatar auswählen" aria-expanded="false" aria-controls="phAvatarGrid">🐸</button>
+            <input id="phName" class="zx-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="nickname" enterkeyhint="done" aria-label="Dein Name">
+            <button id="phDice" class="zx-dice" type="button" title="Zufälliger Name und Avatar" aria-label="Zufälliger Name und Avatar">🎲</button>
+          </div>
+        </div>
+        <div id="phAvatarGrid" class="zx-avatar-grid hidden" role="group" aria-label="Avatare"></div>
+        <p class="zx-note">Gilt für alle Spiele und bleibt nur auf diesem Gerät. Tipp auf den Avatar zum Ändern.</p>
 
-    <section class="zb-how" aria-label="So funktioniert's">
-      <div class="zb-step"><span class="zb-num">1</span><div><b>Lobby erstellen</b><p>Dein Browser wird zum Spielserver. Kein Konto, kein Download.</p></div></div>
-      <div class="zb-step"><span class="zb-num">2</span><div><b>Code teilen</b><p>Freunde tippen den 4-Buchstaben-Code ein – hier oder direkt im Spiel.</p></div></div>
-      <div class="zb-step"><span class="zb-num">3</span><div><b>Zocken</b><p>Die Daten laufen direkt zwischen euren Geräten (WebRTC). Kein Zockbox-Server liest mit.</p></div></div>
-    </section>
+        <details class="zx-settings" id="einstellungen">
+          <summary><span>Einstellungen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="zx-set-body">
+            <div class="zx-set-row">
+              <div class="zx-set-txt"><b>Intro beim Öffnen</b><span>Das kurze „psst…“ beim Start der Startseite.</span></div>
+              <button type="button" class="zx-switch" role="switch" id="zbIntroOn" aria-checked="true" aria-label="Intro beim Öffnen"><i></i></button>
+            </div>
+            <div id="zbTarnSettings" class="zx-tarn-set"></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="zx-sheet zx-how" aria-labelledby="howTitle">
+        <div class="zx-sheet-head"><h2 id="howTitle">So geht's</h2></div>
+        <ol class="zx-steps">
+          <li><b>Lobby erstellen</b><span>Dein Browser wird zum Spielserver. Kein Konto, kein Download.</span></li>
+          <li><b>Code teilen</b><span>Freunde tippen den 4-Buchstaben-Code ein – hier oder direkt im Spiel.</span></li>
+          <li><b>Zocken</b><span>Die Daten laufen direkt zwischen euren Geräten (WebRTC). Kein Zockbox-Server liest mit.</span></li>
+        </ol>
+      </section>
     </div>
   </main>
 
-  <footer class="zb-foot">
-    <div class="zb-wrap">
-      <div class="zb-sig">made by <b>Oskar</b></div>
-      <p class="zb-foot-note">Zum Spaß mit Freunden. Bitte halte dich an die Regeln deiner Schule.</p>
-      <p>Zockbox · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA 4.0)</p>
+  <footer class="zx-foot">
+    <div class="zx-wrap">
+      <div class="zx-sig">made by <b>Oskar</b></div>
+      <p class="zx-foot-note">Zum Spaß mit Freunden. Bitte halte dich an die Regeln deiner Schule.</p>
+      <p class="zx-foot-small">Zockbox · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA 4.0)</p>
     </div>
   </footer>
 

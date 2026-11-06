@@ -5,6 +5,7 @@ import { AVATARS, getProfile, setName, setAvatar, randomName, NAME_MAX } from '.
 import { Board, PALETTE, SIZES, W as CW, H as CH } from './draw.js';
 import { albumToPngBlob, albumToGifBlob, saveBlob, corpseCanvas, CORPSE_STRIP } from './export.js';
 import { sfx } from './sound.js';
+import { qrSvg } from './qr.js';
 
 const GAME_ID = 'krakelpost-v1'; // nicht ändern – Peer-IDs: zockbox-krakelpost-v1-p-CODE
 
@@ -31,7 +32,24 @@ const MODES = [
   { id: 'solo', ico: '🎬', name: 'Solo', desc: 'Erstelle deine eigene Animation in 5 Frames! Spiele alleine oder mit Freunden.', s: { flow: 'soloanim', anim: true, turns: '5', time: 'dynamisch' } },
   { id: 'speedrun', ico: '⚡', name: 'Speedrun', desc: 'Wie Normal – nur mit superkurzen Zeiten. Kein Platz für Meisterwerke!', s: { flow: 'sz', time: 'speedrun' } },
   { id: 'keindruck', ico: '😌', name: 'Kein Druck', desc: 'Die Uhr tickt erst, wenn die Mehrheit auf „Fertig!“ gedrückt hat.', s: { flow: 'sz', time: 'dynamisch' } },
+  { id: 'eigener', ico: '🛠️', name: 'Eigener', desc: 'Bau dir dein eigenes Spiel! Unter „Einstellungen“ kombinierst du Ablauf, Vorlage, Animation, Nachzeichnen und Punkte frei.', s: { flow: 'sz' } },
 ];
+const MODE_COLORS = ['#ffd66b', '#c9b6ff', '#9fd4ff', '#b8ecea', '#a6e8cf', '#ffcf9e', '#ffb3a7', '#ffa9d0', '#d9d2c3', '#c4c7d4', '#a6e8cf', '#ffd66b', '#ffcf9e', '#9fd4ff', '#ffa9d0', '#ffb3a7', '#b8ecea', '#fff27a'];
+// Frei kombinierbare Bausteine („Eigener“ Modus)
+const FLOWS = [['sz', 'Schreiben ↔ Zeichnen'], ['z', 'Nur Zeichnen'], ['s', 'Nur Schreiben (Geschichte)'], ['einsatz', 'Ein Satz – alle zeichnen'], ['sandwich', 'Sandwich (Satz – Bilder – Satz)'],
+  ['ergaenzen', 'Skizze ergänzen'], ['hintergrund', 'Hintergrund + Animation'], ['solo', 'Jeder für sich: ein Bild'], ['soloanim', 'Jeder für sich: Animation']];
+const KEEPS = [['', 'Nichts'], ['alle', 'Am selben Bild weitermalen'], ['vorherige', 'Vorheriges Bild ergänzen'], ['oben', 'Unten anbauen (Fremdkörper)']];
+const FIRSTS = [['', 'Wie die anderen'], ['schneller', 'Kürzer'], ['langsamer', 'Länger']];
+const FLOW_KEYS = ['flow', 'keep', 'copy', 'anim', 'score', 'first'];
+// Hält frei kombinierte Einstellungen spielbar
+function normalizeSettings(s) {
+  if (s.flow === 'hintergrund' || s.flow === 'soloanim') s.anim = true;
+  if (['sz', 's', 'einsatz', 'sandwich', 'solo'].includes(s.flow)) s.anim = false;
+  if (!(s.keep === 'alle' && ['z', 'einsatz'].includes(s.flow)) && !(['oben', 'vorherige'].includes(s.keep) && s.flow === 'z')) s.keep = '';
+  if (s.anim) s.keep = '';
+  if (!['z', 'sandwich'].includes(s.flow) || s.anim || s.keep) s.copy = false;
+  return s;
+}
 const TIMES = {
   langsam: { name: 'Langsam', w: 60, d: 240 },
   normal: { name: 'Normal', w: 40, d: 150 },
@@ -72,9 +90,11 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const AV_COLORS = ['#7c5cff', '#ff4fd8', '#3de0ff', '#c6ff3d', '#ffb347', '#ff5a6e', '#5cffb0', '#ffd84d'];
+const AV_COLORS = ['#ffb3a7', '#ffd66b', '#a6e8cf', '#9fd4ff', '#c9b6ff', '#ffa9d0', '#ffcf9e', '#b8ecea'];
 const avColor = (k) => { let h = 0; for (const ch of String(k)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return AV_COLORS[h % AV_COLORS.length]; };
-const avHtml = (p, cls = 'av') => `<span class="${cls}" style="--c:${avColor((p.avatar || '') + (p.name || ''))}">${esc(p.avatar || '👻')}</span>`;
+// Avatare sind Briefmarken
+const avHtml = (p, size = 'sm') => `<span class="sav ${size}" style="--c:${avColor(p.avatar || '')}"><i><b>${esc(p.avatar || '👻')}</b></i></span>`;
+const PM_SVG = '<svg class="pic-stamp" viewBox="0 0 160 100" aria-hidden="true"><use href="#art-postmark"/></svg>';
 const modeById = (id) => MODES.find((m) => m.id === id) || MODES[0];
 
 // ---------------------------------------------------------------------------
@@ -96,7 +116,7 @@ function openModal(html, onMount) {
 function closeModal() { $('modal').classList.add('hidden'); $('modalCard').innerHTML = ''; }
 $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) closeModal(); });
 function confirmBox(title, text, yes, onYes) {
-  openModal(`<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="modal-btns"><button class="btn ghost" data-a="no" type="button">Abbrechen</button><button class="btn pink" data-a="yes" type="button">${esc(yes)}</button></div>`, (c) => {
+  openModal(`<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="modal-btns"><button class="btn" data-a="no" type="button">Abbrechen</button><button class="btn red" data-a="yes" type="button">${esc(yes)}</button></div>`, (c) => {
     c.querySelector('[data-a=no]').onclick = closeModal;
     c.querySelector('[data-a=yes]').onclick = () => { closeModal(); onYes(); };
   });
@@ -120,8 +140,8 @@ for (const id of ['nameInput', 'nameInput2']) {
 }
 for (const id of ['diceBtn', 'diceBtn2']) $(id).onclick = () => { me.name = setName(randomName()); showProfile(); sfx.play('pop'); };
 function avatarPicker() {
-  openModal(`<h2>Avatar auswählen</h2><div class="av-grid">${AVATARS.map((a) => `<button type="button" data-av="${a}" class="${a === me.avatar ? 'on' : ''}" style="--c:${avColor(a)}">${a}</button>`).join('')}</div>
-    <div class="modal-btns"><button class="btn lime" id="mOk" type="button">Passt!</button></div>`, (c) => {
+  openModal(`<h2>Wähle deine Briefmarke</h2><div class="av-grid">${AVATARS.map((a) => `<button type="button" data-av="${a}" class="${a === me.avatar ? 'on' : ''}" aria-label="${a}">${avHtml({ avatar: a }, 'mid')}</button>`).join('')}</div>
+    <div class="modal-btns"><button class="btn red" id="mOk" type="button">Passt!</button></div>`, (c) => {
     c.querySelectorAll('[data-av]').forEach((b) => b.onclick = () => {
       me.avatar = setAvatar(b.dataset.av);
       c.querySelectorAll('[data-av]').forEach((x) => x.classList.toggle('on', x === b)); sfx.play('pop'); showProfile();
@@ -146,13 +166,11 @@ function show(name) {
   document.body.classList.toggle('on-start', ['start', 'invite', 'public'].includes(name));
   document.body.dataset.screen = name;
 }
-function setHeader(step = '', title = '') {
-  $('hdrStep').innerHTML = step; $('hdrStep').classList.toggle('hidden', !step);
-  $('hdrTitle').textContent = title;
-}
+function setHeader() { /* Kopfzeile zeigt immer das kleine Logo; Runden/Timer stehen im Spielkopf */ }
 document.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => { sfx.play('click'); show(b.dataset.go); });
-$('soundBtn').onclick = () => { sfx.muted = !sfx.muted; $('soundBtn').textContent = sfx.muted ? '🔇' : '🔊'; sfx.play('click'); };
-$('soundBtn').textContent = sfx.muted ? '🔇' : '🔊';
+const soundIcon = () => { $('soundBtn').querySelector('use').setAttribute('href', sfx.muted ? '#i-mute' : '#i-sound'); };
+$('soundBtn').onclick = () => { sfx.muted = !sfx.muted; soundIcon(); sfx.play('click'); };
+soundIcon();
 
 let localDeadline = 0, localTotal = 0, lastTickSec = -1;
 setInterval(() => {
@@ -160,9 +178,10 @@ setInterval(() => {
   if (!localDeadline || !S || !['play'].includes(S.phase)) { t.classList.add('hidden'); return; }
   const left = Math.max(0, localDeadline - Date.now());
   t.classList.remove('hidden');
-  $('timerFill').style.transform = `scaleX(${localTotal ? left / localTotal : 0})`;
+  $('timerFill').style.strokeDashoffset = String(100 - (localTotal ? (left / localTotal) * 100 : 0));
   const sec = Math.ceil(left / 1000);
   $('timerTxt').textContent = sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec}`;
+  $('timerTxt').classList.toggle('long', sec >= 60);
   t.classList.toggle('hurry', sec <= 10);
   if (sec <= 5 && sec > 0 && sec !== lastTickSec && myTask && !submitted) sfx.play('tick');
   lastTickSec = sec;
@@ -287,6 +306,7 @@ function buildTask(i, t) {
       else if (s.keep === 'oben') { task.corpseSrc = prev.img; task.corpseLast = t === T - 1; task.title = t === 1 ? 'Zeichne den Körper – oben schließt er an' : t === 2 ? 'Zeichne die Beine' : 'Zeichne weiter nach unten'; }
       else if (s.flow === 'ergaenzen') { task.under = steps[0].img; task.title = 'Vervollständige die Skizze!'; }
       else if (s.keep === 'alle') { task.base = prev.img; task.title = 'Zeichne weiter an diesem Bild'; }
+      else if (s.flow === 'solo') { task.base = prev.img; task.title = `Bild ${t + 1} von ${T}: Mach weiter an deinem Bild`; }
       else { task.ref = prev.img; task.title = 'Zeichne dieses Bild nach'; }
     }
   }
@@ -355,6 +375,7 @@ function finalizeTurn() {
     } else {
       const img = sub && typeof sub.img === 'string' && sub.img.startsWith('data:image/') ? sub.img : blankPng();
       step = { type: 'img', img, by, auto: !sub || !!sub.auto };
+      if (s.anim && sub && sub.hold > 1) step.hold = sub.hold;
       if (sub && typeof sub.layer === 'string' && sub.layer.startsWith('data:image/')) step.layer = sub.layer;
     }
     H.chains[c].steps[t] = step;
@@ -371,7 +392,7 @@ function startAlbums() {
 }
 function albumHead(i) {
   const ch = H.chains[i];
-  return { t: 'albumStart', i, total: H.chains.length, owner: { name: ch.ownerName, avatar: ch.ownerAvatar }, kind: albumKind(H.settings), fps: (FPS[H.settings.fps] || FPS.normal)[0], count: ch.steps.length, mode: H.settings.mode, score: !!H.settings.score, flow: H.settings.flow };
+  return { t: 'albumStart', i, total: H.chains.length, owner: { name: ch.ownerName, avatar: ch.ownerAvatar }, owners: H.chains.map((c) => ({ name: c.ownerName, avatar: c.ownerAvatar })), kind: albumKind(H.settings), fps: (FPS[H.settings.fps] || FPS.normal)[0], count: ch.steps.length, mode: H.settings.mode, score: !!H.settings.score, flow: H.settings.flow };
 }
 function openAlbum(i) {
   H.album = { i, shown: 0 };
@@ -382,11 +403,12 @@ function revealNext() {
   const a = H.album; const ch = H.chains[a.i];
   if (a.shown >= ch.steps.length) return;
   const s = ch.steps[a.shown];
-  room.broadcast({ t: 'reveal', i: a.i, s: a.shown, step: { type: s.type, text: s.text, img: s.img, by: s.by, auto: s.auto } });
+  room.broadcast({ t: 'reveal', i: a.i, s: a.shown, step: stepOut(s) });
   a.shown++;
   H.autoAt = H.settings.autoAlbum ? Date.now() + (s.type === 'text' ? 2600 : 3200) : 0;
   sync();
 }
+function stepOut(s) { return { type: s.type, text: s.text, img: s.img, by: s.by, auto: s.auto, hold: s.hold || 1 }; }
 function hostNext() {
   if (H.phase !== 'album' || !H.album) return;
   const ch = H.chains[H.album.i];
@@ -436,7 +458,17 @@ function hostHandle(from, msg) {
     case 'settings': {
       if (!isHostMsg || H.phase !== 'lobby') return;
       const s = H.settings;
-      if (msg.mode && MODES.some((m) => m.id === msg.mode) && msg.mode !== s.mode) Object.assign(s, BASE_SETTINGS, modeById(msg.mode).s, { mode: msg.mode });
+      if (msg.mode && MODES.some((m) => m.id === msg.mode) && msg.mode !== s.mode) {
+        if (msg.mode === 'eigener') s.mode = 'eigener'; // übernimmt die aktuellen Bausteine als Startpunkt
+        else Object.assign(s, BASE_SETTINGS, modeById(msg.mode).s, { mode: msg.mode });
+      }
+      // Bausteine frei kombinieren → Modus wird „Eigener“
+      let custom = false;
+      if (msg.flow && FLOWS.some(([v]) => v === msg.flow)) { s.flow = msg.flow; custom = true; }
+      if (typeof msg.keep === 'string' && KEEPS.some(([v]) => v === msg.keep)) { s.keep = msg.keep; custom = true; }
+      if (typeof msg.first === 'string' && FIRSTS.some(([v]) => v === msg.first)) { s.first = msg.first; custom = true; }
+      for (const k of ['copy', 'anim', 'score']) if (typeof msg[k] === 'boolean') { s[k] = msg[k]; custom = true; }
+      if (custom) { s.mode = 'eigener'; normalizeSettings(s); }
       if (msg.time && TIMES[msg.time]) s.time = msg.time;
       if (msg.turns && TURNS.some(([v]) => v === msg.turns)) s.turns = msg.turns;
       if (msg.fps && FPS[msg.fps]) s.fps = msg.fps;
@@ -453,7 +485,7 @@ function hostHandle(from, msg) {
     case 'submit':
       if ((H.phase !== 'play' && H.phase !== 'collect') || msg.turn !== H.turn || !H.roster.includes(from)) return;
       if (H.phase === 'collect' && H.subs[from] && msg.auto) return; // bewusste Abgabe nicht überschreiben
-      H.subs[from] = { text: typeof msg.text === 'string' ? msg.text : undefined, img: msg.img, layer: msg.layer, auto: !!msg.auto };
+      H.subs[from] = { text: typeof msg.text === 'string' ? msg.text : undefined, img: msg.img, layer: msg.layer, auto: !!msg.auto, hold: Math.max(1, Math.min(4, Math.round(+msg.hold) || 1)) };
       onSubmitChange();
       break;
     case 'unsubmit':
@@ -523,7 +555,7 @@ function setupHost() {
     if (H.phase === 'album' && H.album) { // Zuschauer holt das aktuelle Album nach
       room.sendTo(id, albumHead(H.album.i));
       const ch = H.chains[H.album.i];
-      for (let s = 0; s < H.album.shown; s++) { const st = ch.steps[s]; room.sendTo(id, { t: 'reveal', i: H.album.i, s, step: { type: st.type, text: st.text, img: st.img, by: st.by, auto: st.auto }, quiet: true }); }
+      for (let s = 0; s < H.album.shown; s++) room.sendTo(id, { t: 'reveal', i: H.album.i, s, step: stepOut(ch.steps[s]), quiet: true });
     }
   };
   room.onClientLeave = (id) => hostRemove(id, false);
@@ -557,10 +589,11 @@ function onHostMessage(msg) {
       render();
       break;
     }
-    case 'newgame': for (const k of Object.keys(albums)) delete albums[k]; curAlbum = -1; sfx.play('start'); break;
+    case 'newgame': for (const k of Object.keys(albums)) delete albums[k]; curAlbum = -1; albumOwners = []; sfx.play('start'); break;
     case 'task': onTask(msg); break;
     case 'timeup': onTimeUp(msg); break;
     case 'albumStart':
+      if (Array.isArray(msg.owners)) albumOwners = msg.owners;
       albums[msg.i] = { owner: msg.owner, kind: msg.kind, fps: msg.fps, count: msg.count, mode: msg.mode, score: msg.score, flow: msg.flow, steps: [], reacts: {}, votes: {}, myVotes: {} };
       curAlbum = msg.i; renderAlbum(true);
       break;
@@ -597,6 +630,7 @@ function resetToStart() {
   if (old) old.leave();
   S = null; H = null; lastPhase = null; myTask = null; submitted = false; editing = false;
   for (const k of Object.keys(albums)) delete albums[k];
+  albumOwners = []; stopAnim();
   $('chatLog').innerHTML = ''; unread = 0; updateBadge(); $('chat').classList.add('hidden'); $('chatFab').classList.add('hidden');
   $('leaveBtn').classList.add('hidden');
   history.replaceState(null, '', location.pathname);
@@ -611,15 +645,13 @@ function render() {
   $('chatFab').classList.remove('hidden');
   if (S.phase === 'lobby') {
     if (phaseChanged) { myTask = null; submitted = false; }
-    renderLobby(); show('lobby'); setHeader('', 'Lobby');
+    renderLobby(); show('lobby');
   } else if (S.phase === 'play' || S.phase === 'collect') {
-    setHeader(`Runde <b>${Math.min(S.turn + 1, S.total)}</b>/${S.total}`, modeById(S.settings.mode).name);
+    $('roundNum').textContent = `${Math.min(S.turn + 1, S.total)}/${S.total}`;
     renderPlay(); show('play');
   } else if (S.phase === 'album') {
-    if (S.album) setHeader(`Album <b>${S.album.i + 1}</b>/${S.album.total}`, 'Alben');
-    show('album'); renderAlbumBar();
+    show('album'); renderAlbumBar(); renderAlbumSide();
   } else if (S.phase === 'end') {
-    setHeader('', 'Fertig!');
     if (phaseChanged) { renderEnd(); sfx.play('start'); }
     else renderEndControls();
     show('end');
@@ -628,42 +660,68 @@ function render() {
 
 // ---------- LOBBY ----------
 let lobbyTab = 'modes';
+function modeTags(s) {
+  const t = [];
+  t.push((FLOWS.find(([v]) => v === s.flow) || ['', ''])[1]);
+  if (s.keep) t.push((KEEPS.find(([v]) => v === s.keep) || ['', ''])[1]);
+  if (s.anim) t.push('Animation');
+  if (s.copy) t.push('Nachzeichnen');
+  if (s.secret) t.push('Geheimnis');
+  if (s.score) t.push('Punkte');
+  t.push(`Zeit: ${((TIMES[s.time] || {}).name || '').replace(/ \(.*\)/, '')}`);
+  return t.filter(Boolean);
+}
 function renderLobby() {
   const s = S.settings, host = isHost();
   $('pCount').textContent = `${S.players.length}/${s.max}`;
-  $('codePill').textContent = S.isPublic ? `Öffentlich ${S.code}` : `Code ${S.code}`;
-  const slots = Math.max(s.max, S.players.length);
-  let html = '';
-  for (let i = 0; i < slots; i++) {
-    const p = S.players[i];
-    if (p) html += `<button class="pl ${p.id === S.hostId ? 'is-host' : ''} ${p.id === myId() ? 'is-me' : ''}" data-pid="${p.id}" type="button">${avHtml(p)}<span class="pl-n">${esc(p.name)}</span>${p.id === S.hostId ? '<span class="pl-crown" title="Spielleiter">👑</span>' : ''}</button>`;
-    else if (i < S.players.length + 5) html += `<div class="pl empty"><span class="av ghost"></span><span class="pl-n">Leer</span></div>`;
-  }
+  $('codePill').textContent = S.isPublic ? `Öffentlich ${S.code}` : S.code;
+  const wide = matchMedia('(min-width: 1000px)').matches;
+  const empties = Math.max(0, Math.min(s.max - S.players.length, wide ? 4 : (S.players.length % 2 ? 1 : 2)));
+  let html = S.players.map((p) => `<li><button class="pl ${p.id === myId() ? 'is-me' : ''} ${p.spec ? 'spec' : ''}" data-pid="${p.id}" type="button">${avHtml(p, 'sm')}<span class="pl-n">${esc(p.name)}</span>${p.spec ? '<span class="pl-you">Zuschauer</span>' : ''}${p.id === myId() ? '<span class="pl-you">Du</span>' : ''}${p.id === S.hostId ? '<svg class="ico pl-crown" aria-label="Spielleiter"><use href="#i-crown"/></svg>' : ''}</button></li>`).join('');
+  for (let i = 0; i < empties; i++) html += '<li><div class="pl empty"><span class="ph"></span><span class="pl-n">Leer</span></div></li>';
   $('playerGrid').innerHTML = html;
-  // Modi
-  $('modeGrid').innerHTML = MODES.map((m) => `<button class="mode ${m.id === s.mode ? 'on' : ''}" data-mode="${m.id}" type="button" ${host ? '' : 'disabled'}>
-    <span class="m-ico">${m.ico}</span><span class="m-name">${esc(m.name)}</span><span class="m-desc">${esc(m.desc)}</span></button>`).join('');
+  // Voreinstellungen als Briefmarken
+  $('modeGrid').innerHTML = MODES.map((m, k) => `<button class="mode ${m.id === s.mode ? 'on' : ''}" data-mode="${m.id}" type="button" ${host ? '' : 'disabled'} aria-pressed="${m.id === s.mode}" title="${esc(m.desc)}">
+    <span class="m-stamp" style="--c:${MODE_COLORS[k % MODE_COLORS.length]}"><i><b>${m.ico}</b></i></span><span class="m-name">${esc(m.name).replace(/^(Fremd|Meister|Hinter)/, '$1\u00ad')}</span></button>`).join('');
+  const m = modeById(s.mode);
+  $('modeInfo').innerHTML = `<span class="mi-ico">${m.ico}</span><div><b>${esc(m.name)}</b><p>${esc(m.desc)}</p><div class="mi-tags">${modeTags(s).map((t) => `<span>${esc(t)}</span>`).join('')}</div></div>`;
   // Einstellungen
-  const sel = (key, opts, val) => `<select data-set="${key}" ${host ? '' : 'disabled'}>${opts.map(([v, l]) => `<option value="${v}" ${String(v) === String(val) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const tog = (key, val) => `<label class="switch"><input type="checkbox" data-set="${key}" ${val ? 'checked' : ''} ${host ? '' : 'disabled'}><span></span></label>`;
+  const dis = host ? '' : 'disabled';
+  const sel = (key, opts, val) => `<select data-set="${key}" ${dis}>${opts.map(([v, l]) => `<option value="${v}" ${String(v) === String(val) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  const tog = (key, val, off) => `<label class="switch"><input type="checkbox" data-set="${key}" ${val ? 'checked' : ''} ${dis || (off ? 'disabled' : '')}><span></span></label>`;
+  const canAnim = !['sz', 's', 'einsatz', 'sandwich', 'solo', 'hintergrund', 'soloanim'].includes(s.flow);
+  const canCopy = ['z', 'sandwich'].includes(s.flow) && !s.anim && !s.keep;
+  const keepOpts = s.anim ? KEEPS.slice(0, 1) : s.flow === 'z' ? KEEPS : s.flow === 'einsatz' ? KEEPS.slice(0, 2) : KEEPS.slice(0, 1);
   $('setList').innerHTML = `
-    <div class="set"><span>⏱️ Zeit</span>${sel('time', Object.entries(TIMES).map(([k, v]) => [k, v.name]), s.time)}</div>
-    <div class="set"><span>🔁 Runden</span>${sel('turns', TURNS, s.turns)}</div>
-    <div class="set"><span>🤫 Geheimnis <small>Eigene Striche &amp; Buchstaben unsichtbar</small></span>${tog('secret', s.secret)}</div>
-    ${s.anim ? `<div class="set"><span>🎞️ Animationstempo</span>${sel('fps', Object.entries(FPS).map(([k, v]) => [k, v[1]]), s.fps)}</div>` : ''}
-    <div class="set"><span>👥 Max. Spieler</span>${sel('max', MAX_OPTS.map((v) => [v, String(v)]), s.max)}</div>
-    <div class="set"><span>👀 Zuschauer mitten im Spiel <small>Neue schauen zu, nächstes Spiel sind sie dabei</small></span>${tog('lateJoin', s.lateJoin)}</div>
-    <div class="set"><span>▶ Alben automatisch zeigen <small>Sonst blättert der Spielleiter</small></span>${tog('autoAlbum', s.autoAlbum)}</div>`;
+    <div class="set-group">Allgemein</div>
+    <div class="set"><span>Zeit <small>Wie lange pro Runde</small></span>${sel('time', Object.entries(TIMES).map(([k, v]) => [k, v.name]), s.time)}</div>
+    <div class="set"><span>Runden</span>${sel('turns', TURNS, s.turns)}</div>
+    <div class="set"><span>Geheimnis <small>Eigene Striche &amp; Buchstaben unsichtbar</small></span>${tog('secret', s.secret)}</div>
+    <div class="set"><span>Max. Spieler</span>${sel('max', MAX_OPTS.map((v) => [v, String(v)]), s.max)}</div>
+    <div class="set"><span>Zuschauer mitten im Spiel <small>Neue schauen zu, nächstes Spiel sind sie dabei</small></span>${tog('lateJoin', s.lateJoin)}</div>
+    <div class="set"><span>Alben automatisch zeigen <small>Sonst blättert der Spielleiter</small></span>${tog('autoAlbum', s.autoAlbum)}</div>
+    <div class="set-group">Spielablauf · ändern macht daraus „Eigener“</div>
+    <div class="set"><span>Ablauf</span>${sel('flow', FLOWS, s.flow)}</div>
+    <div class="set ${keepOpts.length < 2 ? 'locked' : ''}"><span>Vorlage <small>Was vom vorigen Bild bleibt</small></span>${sel('keep', keepOpts, s.keep)}</div>
+    <div class="set ${canAnim || s.anim ? '' : 'locked'}"><span>Animation <small>Vorbild scheint durch, Album spielt als Film</small></span>${tog('anim', s.anim, !canAnim)}</div>
+    ${s.anim ? `<div class="set"><span>Animationstempo</span>${sel('fps', Object.entries(FPS).map(([k, v]) => [k, v[1]]), s.fps)}</div>` : ''}
+    <div class="set ${canCopy || s.copy ? '' : 'locked'}"><span>Nachzeichnen <small>Bild kurz ansehen, dann aus dem Gedächtnis</small></span>${tog('copy', s.copy, !canCopy)}</div>
+    <div class="set"><span>Punkte <small>Daumen hoch, wenn die Bedeutung bleibt</small></span>${tog('score', s.score)}</div>
+    <div class="set"><span>Erste Runde</span>${sel('first', FIRSTS, s.first)}</div>`;
   $('guestWait').classList.toggle('hidden', host);
   $('startBtn').classList.toggle('hidden', !host);
-  const m = modeById(s.mode);
   const n = S.players.length;
   const need = isSoloFlow(s.flow) ? 1 : 2;
   $('startBtn').disabled = n < need;
-  $('sbInfo').innerHTML = `<b>${m.ico} ${esc(m.name)}</b><span>${esc((TIMES[s.time] || {}).name || '')} · ${n < need ? 'Mindestens 2 Spieler' : `${turnPreview(s, n)} Runden`}</span>`;
+  const T = turnPreview(s, n);
+  $('sbInfo').innerHTML = `<b>${m.ico} ${esc(m.name)}</b><span>${n < need ? 'Mindestens 2 Spieler' : `${T} ${T === 1 ? 'Runde' : 'Runden'} · ${esc((TIMES[s.time] || {}).name || '')}`}</span>`;
 }
 function turnPreview(s, n) { return turnCount(s, Math.max(1, n)); }
-$('modeGrid').addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (!b || !isHost()) return; sfx.play('pop'); room.send({ t: 'settings', mode: b.dataset.mode }); });
+$('modeGrid').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-mode]'); if (!b || !isHost()) return;
+  sfx.play('pop'); room.send({ t: 'settings', mode: b.dataset.mode });
+  if (b.dataset.mode === 'eigener') setTimeout(() => $('lobbyTabs').querySelector('[data-tab=settings]').click(), 120);
+});
 $('setList').addEventListener('change', (e) => {
   const el = e.target.closest('[data-set]'); if (!el || !isHost()) return;
   const k = el.dataset.set; room.send({ t: 'settings', [k]: el.type === 'checkbox' ? el.checked : el.value });
@@ -684,7 +742,18 @@ $('inviteBtn').onclick = async () => {
   toast((await copyText(url)) ? 'Einladungslink kopiert 🔗' : url, { ms: 4000 });
 };
 $('codePill').onclick = async () => { if (S && (await copyText(S.code))) toast('Code kopiert'); };
-$('qrHint').onclick = () => { if (!S) return; openModal(`<h2>Lobby-Code</h2><div class="big-code">${esc(S.code)}</div><p>Auf der Zockbox-Startseite unter „Mit Code beitreten“ eintippen – oder den Link teilen.</p><div class="modal-btns"><button class="btn lime" type="button" id="mOk">OK</button></div>`, (c) => { c.querySelector('#mOk').onclick = closeModal; }); };
+$('qrHint').onclick = () => {
+  if (!S) return;
+  const url = inviteUrl();
+  openModal(`<h2>Einladung</h2><div class="qr-box">${qrSvg(url)}</div>
+    ${S.isPublic ? '' : `<div class="big-code">${esc(S.code)}</div>`}
+    <p>QR-Code mit der Handykamera scannen – oder den Code in der Zockbox unter „Mit Code beitreten“ eintippen.</p>
+    <div class="inv-link"><input type="text" readonly value="${esc(url)}" aria-label="Einladungslink"><button class="btn small" type="button" id="mCopy"><svg class="ico"><use href="#i-copy"/></svg>Kopieren</button></div>
+    <div class="modal-btns"><button class="btn red" type="button" id="mOk">OK</button></div>`, (c) => {
+    c.querySelector('#mOk').onclick = closeModal;
+    c.querySelector('#mCopy').onclick = async () => { const ok = await copyText(url); if (!ok) c.querySelector('.inv-link input').select(); toast(ok ? 'Link kopiert 🔗' : 'Link markiert – jetzt kopieren'); };
+  });
+};
 $('playerGrid').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pid]'); if (!b) return;
   playerMenu(b.dataset.pid);
@@ -693,8 +762,8 @@ $('doneList').addEventListener('click', (e) => { const b = e.target.closest('[da
 function playerMenu(pid) {
   const p = S.players.find((x) => x.id === pid); if (!p) return;
   const canKick = isHost() && pid !== myId();
-  openModal(`<div class="pm">${avHtml(p, 'av big')}<h2>${esc(p.name)}</h2><p>${pid === S.hostId ? '👑 Spielleiter' : p.spec ? '👀 Schaut zu' : 'Spieler'}</p></div>
-    <div class="modal-btns"><button class="btn ghost" data-a="x" type="button">Schließen</button>${canKick ? '<button class="btn pink" data-a="kick" type="button">Rauswerfen</button>' : ''}</div>`, (c) => {
+  openModal(`<div class="pm">${avHtml(p, 'big')}<h2>${esc(p.name)}</h2><p>${pid === S.hostId ? '👑 Spielleiter' : p.spec ? '👀 Schaut zu' : 'Spieler'}</p></div>
+    <div class="modal-btns"><button class="btn" data-a="x" type="button">Schließen</button>${canKick ? '<button class="btn red" data-a="kick" type="button">Rauswerfen</button>' : ''}</div>`, (c) => {
     c.querySelector('[data-a=x]').onclick = closeModal;
     const k = c.querySelector('[data-a=kick]'); if (k) k.onclick = () => { closeModal(); room.send({ t: 'kick', id: pid }); };
   });
@@ -715,6 +784,8 @@ async function onTask(task) {
   $('copyStartBtn').classList.toggle('hidden', !task.copy);
   // Schreiben
   const isWrite = task.kind === 'write';
+  $('task').classList.toggle('is-write', isWrite);
+  $('task').classList.toggle('has-ref', !!task.ref);
   $('writeBox').classList.toggle('hidden', !isWrite);
   $('writeInput').value = ''; $('writeInput').classList.toggle('secret', !!task.secret); updateCount();
   $('writeInput').placeholder = task.turn === 0 ? 'Schreib hier deinen Satz …' : task.ref ? 'Was siehst du auf dem Bild?' : 'Schreib die Geschichte weiter …';
@@ -732,6 +803,9 @@ async function onTask(task) {
     $('secretVeil').classList.toggle('hidden', !task.secret);
     board.locked = false;
   }
+  setHold(1);
+  (isWrite ? $('writeBox') : $('drawFoot')).appendChild($('doneBtn')); // Desktop: „Fertig!“ direkt unter der Zeichenfläche
+  $('holdRow').classList.toggle('hidden', isWrite || !(S && S.settings.anim));
   $('doneBtn').disabled = false;
   $('doneBtn').classList.toggle('hidden', !!task.copy);
   render();
@@ -749,7 +823,7 @@ async function corpseUnder(src) {
 $('copyStartBtn').onclick = () => {
   if (!myTask) return;
   copyStarted = true; sfx.play('pop');
-  $('thTitle').textContent = 'Und jetzt: aus dem Gedächtnis nachzeichnen!';
+  $('thTitle').textContent = 'Jetzt aus dem Gedächtnis nachzeichnen!';
   $('ref').classList.add('hidden'); $('copyStartBtn').classList.add('hidden'); $('drawBox').classList.remove('hidden'); $('doneBtn').classList.remove('hidden');
 };
 function updateCount() { $('writeCount').textContent = `${$('writeInput').value.length}/120`; }
@@ -764,7 +838,7 @@ function collectWork(auto) {
   if (t.kind === 'write') return { t: 'submit', turn: t.turn, text: $('writeInput').value.slice(0, 120), auto };
   if (t.copy && !copyStarted) return { t: 'submit', turn: t.turn, img: blankPng(), auto: true };
   const keepUnder = !!t.under; // Vorlage gehört zum Bild (Ergänzen, Hintergrund, Fehlendes Teil, Fremdkörper)
-  const msg = { t: 'submit', turn: t.turn, img: board.exportComposite(keepUnder), auto };
+  const msg = { t: 'submit', turn: t.turn, img: board.exportComposite(keepUnder), auto, hold: curHold };
   if (t.needLayer) msg.layer = board.exportLayer();
   return msg;
 }
@@ -800,38 +874,56 @@ function renderPlay() {
     if (board) board.locked = true;
     const players = S.players.filter((p) => !p.spec);
     const done = players.filter((p) => p.done).length;
-    $('waitTitle').textContent = spec ? 'Du schaust zu 👀' : S.phase === 'collect' ? 'Zeit ist um!' : 'Fertig! Warte auf die anderen …';
-    $('waitSub').textContent = spec ? 'Beim nächsten Spiel bist du dabei. Die Alben siehst du gleich mit.' : `${done} von ${players.length} sind fertig`;
+    $('waitTitle').textContent = spec ? 'Du schaust zu' : S.phase === 'collect' ? 'Zeit ist um!' : 'Warte auf die anderen Spieler …';
+    $('waitSub').textContent = spec ? 'Beim nächsten Spiel bist du dabei. Die Alben siehst du gleich mit.' : `${done} von ${players.length} haben abgeschickt`;
+    $('thKicker').textContent = spec ? 'Zuschauer' : 'Abgeschickt';
+    $('thTitle').textContent = spec ? 'Die anderen krakeln gerade …' : 'Dein Brief ist unterwegs!';
     const specs = S.players.filter((p) => p.spec);
-    $('doneList').innerHTML = players.map((p) => `<button type="button" data-pid="${p.id}" class="dl ${p.done ? 'ok' : ''}" title="${esc(p.name)}">${avHtml(p)}${p.done ? '<i>✓</i>' : ''}</button>`).join('') +
+    $('doneList').innerHTML = players.map((p) => `<button type="button" data-pid="${p.id}" class="dl ${p.done ? 'ok' : ''}" title="${esc(p.name)}">${avHtml(p, 'mid').replace('class="sav mid"', `class="sav mid ${p.done ? 'ok' : ''}"`)}<small>${esc(p.name)}</small></button>`).join('') +
       (specs.length ? `<span class="dl-spec">👀 ${specs.map((p) => `<button type="button" data-pid="${p.id}" class="dl-sname">${esc(p.name)}</button>`).join(', ')}</span>` : '');
     $('editBtn').classList.toggle('hidden', !haveTask || S.phase !== 'play');
     $('forceBtn').classList.toggle('hidden', !isHost() || S.phase !== 'play');
   } else {
     board.locked = false;
     $('forceBtn').classList.add('hidden');
+    if (myTask) { $('thKicker').textContent = myTask.kicker; $('thTitle').textContent = myTask.copy && copyStarted ? 'Jetzt aus dem Gedächtnis nachzeichnen!' : myTask.title; }
   }
 }
 
 // Werkzeuge
 function buildTools() {
-  $('sizeRow').innerHTML = SIZES.map((s, i) => `<button class="size ${i === 1 ? 'on' : ''}" data-size="${s}" type="button" aria-label="Größe ${i + 1}"><i style="width:${Math.min(28, 4 + s * 0.6)}px;height:${Math.min(28, 4 + s * 0.6)}px"></i></button>`).join('');
+  $('sizeRow').innerHTML = SIZES.map((s, i) => `<button class="size ${i === 1 ? 'on' : ''}" data-size="${s}" type="button" aria-label="Größe ${i + 1}" title="Größe ${i + 1}"><i style="width:${[4, 7, 12, 18, 25][i]}px;height:${[4, 7, 12, 18, 25][i]}px"></i></button>`).join('');
   $('palette').innerHTML = PALETTE.map((c, i) => `<button class="sw ${i === 0 ? 'on' : ''}" data-color="${c}" style="--sw:${c}" type="button" aria-label="Farbe ${c}"></button>`).join('') +
-    `<label class="sw custom" title="Eigene Farbe" aria-label="Eigene Farbe"><input type="color" id="customColor" value="#7c5cff"><span>🎨</span></label>`;
+    `<label class="sw custom" title="Eigene Farbe" aria-label="Eigene Farbe"><input type="color" id="customColor" value="#2f62e6"><i></i></label>`;
 }
 buildTools();
-function setTool(t) { board.tool = t; document.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t)); }
+let lastTool = 'pen';
+function setTool(t) {
+  if (t !== 'picker') lastTool = t;
+  board.tool = t; document.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
+}
 function setColor(c) {
-  board.color = c; document.querySelectorAll('#palette .sw').forEach((b) => b.classList.toggle('on', b.dataset.color === c));
-  if (board.tool === 'eraser') setTool('pen');
+  c = String(c).toLowerCase();
+  board.color = c;
+  let hit = false;
+  document.querySelectorAll('#palette .sw[data-color]').forEach((b) => { const on = b.dataset.color.toLowerCase() === c; b.classList.toggle('on', on); hit = hit || on; });
+  document.querySelector('#palette .custom').classList.toggle('on', !hit);
+  if (!hit) $('customColor').value = c;
+  if (board.tool === 'eraser' || board.tool === 'picker') setTool(lastTool === 'eraser' ? 'pen' : lastTool);
   $('palette').style.setProperty('--cur', c);
 }
-$('tools').addEventListener('click', (e) => {
+// Pipette: Farbe übernehmen und zurück zum vorigen Werkzeug
+board.onPick = (c) => { setColor(c); sfx.play('pop'); };
+// Belichtung (Animation): wie lange dieses Bild im Film stehen bleibt
+let curHold = 1;
+function setHold(h) { curHold = h; document.querySelectorAll('#holdRow [data-hold]').forEach((b) => b.classList.toggle('on', +b.dataset.hold === h)); }
+$('holdRow').addEventListener('click', (e) => { const b = e.target.closest('[data-hold]'); if (b) { setHold(+b.dataset.hold); sfx.play('click'); } });
+$('drawBox').addEventListener('click', (e) => {
   const t = e.target.closest('[data-tool]'); if (t) { setTool(t.dataset.tool); sfx.play('click'); return; }
-  const s = e.target.closest('[data-size]'); if (s) { board.size = +s.dataset.size; document.querySelectorAll('[data-size]').forEach((b) => b.classList.toggle('on', b === s)); return; }
+  const s = e.target.closest('#sizeRow [data-size]'); if (s) { board.size = +s.dataset.size; document.querySelectorAll('[data-size]').forEach((b) => b.classList.toggle('on', b === s)); return; }
   const c = e.target.closest('[data-color]'); if (c) setColor(c.dataset.color);
 });
-$('customColor').addEventListener('input', (e) => { setColor(e.target.value); document.querySelector('#palette .custom').classList.add('on'); });
+$('customColor').addEventListener('input', (e) => setColor(e.target.value));
 $('opacityRange').addEventListener('input', (e) => { board.opacity = +e.target.value / 100; });
 $('undoBtn').onclick = () => board.undo();
 $('redoBtn').onclick = () => board.redo();
@@ -843,19 +935,21 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); if (e.shiftKey) board.redo(); else board.undo(); return; }
   if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); board.redo(); return; }
-  const map = { b: 'pen', p: 'pen', e: 'eraser', g: 'fill', f: 'fill', l: 'line', r: 'rect', o: 'ellipse' };
-  if (map[k] && !e.ctrlKey && !e.metaKey) setTool(map[k]);
+  const map = { b: 'pen', p: 'pen', e: 'eraser', g: 'fill', f: 'fill', i: 'picker', l: 'line', r: e.shiftKey ? 'rectf' : 'rect', o: e.shiftKey ? 'ellipsef' : 'ellipse' };
+  if (map[k] && !e.ctrlKey && !e.metaKey && !e.altKey) setTool(map[k]);
 });
 
 // ---------- ALBEN ----------
 let animTimer = null;
+let albumOwners = [];
 function stepHtml(a, s, idx) {
   const by = s.by || { name: '?', avatar: '👻' };
+  const has = s.text && s.text.trim();
   const body = s.type === 'text'
-    ? `<div class="bubble ${s.text && s.text.trim() ? '' : 'empty'}">${esc(s.text && s.text.trim() ? s.text : '(nichts geschrieben)')}</div>`
-    : `<div class="pic"><img src="${s.img}" alt="Zeichnung von ${esc(by.name)}" loading="lazy"></div>`;
+    ? `<div class="bubble ${has ? '' : 'empty'}">${esc(has ? s.text : '(nichts geschrieben)')}</div>`
+    : `<div class="pic"><img src="${s.img}" alt="Zeichnung von ${esc(by.name)}" loading="lazy">${idx === 0 ? '' : PM_SVG}</div>`;
   return `<article class="st ${s.type}" data-s="${idx}">
-    <div class="st-who">${avHtml(by)}<span>${esc(by.name)}</span>${s.auto ? '<em title="Bei Zeitablauf automatisch abgegeben">⏰</em>' : ''}</div>
+    <div class="st-who">${avHtml(by, 'xs')}<span class="who-n">${esc(by.name)}</span>${s.auto ? '<em title="Bei Zeitablauf automatisch abgegeben">⏰</em>' : ''}</div>
     ${body}
     <div class="st-react" data-s="${idx}">${reactBar(a, idx)}</div>
   </article>`;
@@ -872,22 +966,30 @@ function reactBar(a, idx) {
 function updateReacts(idx) { const a = albums[curAlbum]; const el = document.querySelector(`#album .st-react[data-s="${idx}"]`); if (a && el) el.innerHTML = reactBar(a.kind === 'anim' ? { ...a, score: false } : a, idx); }
 $('album').addEventListener('click', (e) => {
   const a = albums[curAlbum]; if (!a || !room) return;
+  const fr = e.target.closest('[data-f]'); if (fr && a.kind === 'anim') { stopAnim(); showFrame(a, +fr.dataset.f); return; }
+  if (e.target.closest('#animImg') && a.kind === 'anim') { if (animTimer) stopAnim(); else playAnim(a); return; }
   const row = e.target.closest('.st-react'); if (!row) return;
   const idx = +row.dataset.s;
   const rx = e.target.closest('[data-e]'); if (rx) { sfx.play('like'); room.send({ t: 'react', i: curAlbum, s: idx, e: rx.dataset.e }); return; }
   const vb = e.target.closest('[data-v]');
   if (vb) { const v = +vb.dataset.v; const cur = a.myVotes[idx] || 0; const nv = cur === v ? 0 : v; a.myVotes[idx] = nv; room.send({ t: 'vote', i: curAlbum, s: idx, v: nv }); updateReacts(idx); }
 });
+function renderAlbumSide() {
+  const box = $('albumSide'); if (!albumOwners.length) { box.innerHTML = ''; return; }
+  const cur = S && S.album ? S.album.i : curAlbum;
+  box.innerHTML = albumOwners.map((o, i) => `<div class="as-item ${i === cur ? 'on' : ''} ${i < cur || (S && S.phase === 'end') ? 'done' : ''}">${avHtml(o, 'xs')}<span class="as-n">${esc(o.name)}</span></div>`).join('');
+  const on = box.querySelector('.on'); if (on && box.scrollWidth > box.clientWidth) box.scrollLeft = on.offsetLeft - 12;
+}
 function renderAlbum(fresh, newIdx) {
   const a = albums[curAlbum]; if (!a) return;
-  $('albumWho').innerHTML = `${avHtml(a.owner)}<div><small>Album von</small><b>${esc(a.owner.name)}</b></div>`;
+  $('albumWho').innerHTML = `${avHtml(a.owner, 'sm')}<div><small>Album von</small><b>${esc(a.owner.name)}</b></div>`;
   $('albumNav').textContent = `${a.steps.filter(Boolean).length}/${a.count}`;
   const box = $('album');
-  if (fresh) { box.innerHTML = ''; box.className = 'album k-' + a.kind; stopAnim(); }
+  if (fresh) { box.innerHTML = ''; box.className = 'album k-' + a.kind; stopAnim(); renderAlbumSide(); }
   if (a.kind === 'anim') {
-    if (!box.querySelector('.anim-stage')) box.innerHTML = `<div class="anim-stage"><img id="animImg" alt="Animation"><span class="anim-badge" id="animBadge"></span></div><div class="st-react" data-s="0">${reactBar({ ...a, score: false }, 0)}</div><div class="frames" id="frames"></div>`;
+    if (!box.querySelector('.anim-stage')) box.innerHTML = `<div class="anim-stage"><img id="animImg" alt="Animation – antippen zum Anhalten"><span class="anim-badge" id="animBadge"></span></div><div class="st-react" data-s="0">${reactBar({ ...a, score: false }, 0)}</div><div class="frames" id="frames"></div>`;
     const frames = animSteps(a);
-    $('frames').innerHTML = frames.map((s, i) => `<button class="fr" data-f="${i}" type="button"><img src="${s.img}" alt=""><span>${i + 1}</span></button>`).join('');
+    $('frames').innerHTML = frames.map((s, i) => `<button class="fr" data-f="${i}" type="button" aria-label="Bild ${i + 1}"><img src="${s.img}" alt=""><span>${i + 1}</span>${(s.hold || 1) > 1 ? `<em>${s.hold}×</em>` : ''}</button>`).join('');
     playAnim(a);
   } else {
     if (newIdx != null && a.steps[newIdx] && !box.querySelector(`.st[data-s="${newIdx}"]`)) {
@@ -897,39 +999,45 @@ function renderAlbum(fresh, newIdx) {
     } else if (fresh) box.innerHTML = a.steps.map((s, i) => s ? stepHtml(a, s, i) : '').join('');
     if (a.kind === 'corpse' && a.steps.filter(Boolean).length === a.count && !box.querySelector('.corpse-final')) {
       corpseCanvas(a.steps).then((c) => {
-        if (albums[curAlbum] !== a) return;
-        box.insertAdjacentHTML('beforeend', `<div class="corpse-final"><h3>🧟 Die fertige Figur</h3><img src="${c.toDataURL('image/png')}" alt="Fertige Figur"></div>`);
+        if (albums[curAlbum] !== a || box.querySelector('.corpse-final')) return;
+        box.insertAdjacentHTML('beforeend', `<div class="corpse-final pop-in"><h3>🧟 Die fertige Figur</h3><img src="${c.toDataURL('image/png')}" alt="Fertige Figur"></div>`);
         box.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
     }
   }
   renderAlbumBar();
 }
-function animSteps(a) { const f = a.steps.filter(Boolean); return a.flow === 'hintergrund' && f.length > 1 ? f.slice(1) : f; }
+function animSteps(a) { const f = a.steps.filter((s) => s && s.img); return a.flow === 'hintergrund' && f.length > 1 ? f.slice(1) : f; }
+let animIdx = 0;
+function showFrame(a, i) {
+  const st = animSteps(a); if (!st.length) return;
+  animIdx = ((i % st.length) + st.length) % st.length;
+  const s = st[animIdx];
+  $('animImg').src = s.img;
+  $('animBadge').textContent = `${animIdx + 1}/${st.length} · ${s.by ? s.by.avatar + ' ' + s.by.name : ''}${(s.hold || 1) > 1 ? ` · ${s.hold}×` : ''}`;
+  document.querySelectorAll('#frames .fr').forEach((f, k) => f.classList.toggle('on', k === animIdx));
+}
 function playAnim(a) {
   stopAnim();
   const st = animSteps(a);
   if (!st.length) return;
-  let i = -1; const img = $('animImg'), badge = $('animBadge');
-  const step = () => {
-    i = (i + 1) % st.length; img.src = st[i].img;
-    badge.textContent = `${i + 1}/${st.length} · ${st[i].by ? st[i].by.avatar + ' ' + st[i].by.name : ''}`;
-    document.querySelectorAll('#frames .fr').forEach((f, k) => f.classList.toggle('on', k === i));
-  };
-  step();
-  animTimer = setInterval(step, 1000 / (a.fps || 6));
+  const base = 1000 / (a.fps || 6);
+  let i = animIdx >= st.length ? -1 : animIdx - 1;
+  const tick = () => { i = (i + 1) % st.length; showFrame(a, i); animTimer = setTimeout(tick, base * (st[i].hold || 1)); };
+  tick();
 }
-function stopAnim() { if (animTimer) clearInterval(animTimer); animTimer = null; }
+function stopAnim() { if (animTimer) clearTimeout(animTimer); animTimer = null; }
 function renderAlbumBar() {
   if (!S || S.phase !== 'album' || !S.album) return;
   const host = isHost();
   const { shown, count, i, total } = S.album;
   $('nextBtn').classList.toggle('hidden', !host);
   $('autoBtn').classList.toggle('hidden', !host);
-  $('autoBtn').textContent = S.settings.autoAlbum ? '⏸ Auto' : '▶ Auto';
-  $('nextBtn').textContent = shown < count ? 'Weiter ▸' : i + 1 < total ? 'Nächstes ▸' : 'Zum Ende ▸';
+  $('autoBtn').innerHTML = S.settings.autoAlbum ? '<svg class="ico"><use href="#i-pause"/></svg><span>Auto</span>' : '<svg class="ico"><use href="#i-play"/></svg><span>Auto</span>';
+  $('autoBtn').title = S.settings.autoAlbum ? 'Automatisch blättern anhalten' : 'Automatisch blättern';
+  $('nextBtn').textContent = shown < count ? 'Weiter' : i + 1 < total ? 'Nächstes Album' : 'Zum Ende';
   $('nextBtn').title = shown < count ? 'Nächsten Schritt zeigen' : i + 1 < total ? 'Nächstes Album' : 'Zum Ende';
-  $('albumBar').dataset.guest = host ? '' : 'Der Spielleiter blättert weiter …';
+  $('albumGuest').textContent = host ? '' : 'Der Spielleiter blättert weiter …';
 }
 $('nextBtn').onclick = () => { if (isHost()) { sfx.play('click'); room.send({ t: 'next' }); } };
 $('autoBtn').onclick = () => { if (isHost()) room.send({ t: 'auto', on: !S.settings.autoAlbum }); };
@@ -939,7 +1047,7 @@ async function downloadAlbum(i, type, btn) {
   const a = albums[i]; if (!a) return;
   const view = { ...a, steps: a.kind === 'anim' ? animSteps(a) : a.steps.filter(Boolean) };
   if (!view.steps.length) { toast('Noch nichts zum Herunterladen', { err: true }); return; }
-  const label = btn ? btn.textContent : '';
+  const label = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
   try {
     const safe = a.owner.name.replace(/[^\wäöüÄÖÜß-]+/g, '_').slice(0, 20) || 'album';
@@ -947,7 +1055,7 @@ async function downloadAlbum(i, type, btn) {
     const r = await saveBlob(blob, `krakelpost-${safe}.${type}`);
     if (r === 'downloaded') toast(type === 'gif' ? 'GIF gespeichert 🎞️' : 'Bild gespeichert 🖼️');
   } catch (e) { console.warn(e); toast('Download hat nicht geklappt 😕', { err: true }); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = label; } }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = label; } }
 }
 function floatEmoji(e) {
   if (curScreen !== 'album') return;
@@ -964,10 +1072,10 @@ function renderEnd() {
     const a = albums[i]; const first = a.steps.find(Boolean); const lastImg = [...a.steps].reverse().find((s) => s && s.img);
     const likes = Object.values(a.reacts).reduce((n, r) => n + Object.values(r.counts || {}).reduce((x, y) => x + y, 0), 0);
     return `<div class="al-card">
-      <div class="al-head">${avHtml(a.owner)}<div><b>${esc(a.owner.name)}</b><small>${a.steps.filter(Boolean).length} Schritte${likes ? ` · ${likes} Reaktionen` : ''}</small></div></div>
+      <div class="al-head">${avHtml(a.owner, 'sm')}<div><b>${esc(a.owner.name)}</b><small>${a.steps.filter(Boolean).length} Schritte${likes ? ` · ${likes} Reaktionen` : ''}</small></div></div>
       ${lastImg ? `<img class="al-thumb" src="${lastImg.img}" alt="">` : ''}
       ${first && first.type === 'text' ? `<p class="al-first">„${esc(first.text || '…')}“</p>` : ''}
-      <div class="al-btns"><button class="btn small ghost" data-view="${i}" type="button">👁 Ansehen</button><button class="btn small ghost" data-png="${i}" type="button">⤓ Bild</button><button class="btn small ghost" data-gif="${i}" type="button">⤓ GIF</button></div>
+      <div class="al-btns"><button class="btn small" data-view="${i}" type="button"><svg class="ico"><use href="#i-eye"/></svg>Ansehen</button><button class="btn small" data-png="${i}" type="button"><svg class="ico"><use href="#i-dl"/></svg>Bild</button><button class="btn small" data-gif="${i}" type="button"><svg class="ico"><use href="#i-dl"/></svg>GIF</button></div>
     </div>`;
   }).join('') : '<p class="muted center">Du bist zu spät gekommen – nächstes Mal bist du dabei!</p>';
   renderEndControls();
@@ -975,7 +1083,7 @@ function renderEnd() {
 function renderEndControls() {
   const sc = S.scores;
   $('scoreCard').classList.toggle('hidden', !sc);
-  if (sc) $('scoreCard').innerHTML = `<h3 class="card-h">🏆 Punkte</h3><ol class="scores">${sc.map((p, k) => `<li class="${k === 0 ? 'win' : ''}">${avHtml(p)}<span>${esc(p.name)}</span><b>${p.pts}</b></li>`).join('')}</ol>`;
+  if (sc) $('scoreCard').innerHTML = `<h3>🏆 Punkte</h3><ol class="scores">${sc.map((p, k) => `<li class="${k === 0 ? 'win' : ''}">${avHtml(p, 'xs')}<span class="sc-n">${esc(p.name)}</span><b>${p.pts}</b></li>`).join('')}</ol>`;
   $('againBtn').classList.toggle('hidden', !isHost());
   $('endNote').textContent = isHost() ? '' : 'Der Spielleiter bringt euch gleich zurück in die Lobby.';
 }
@@ -987,11 +1095,15 @@ $('albumList').addEventListener('click', (e) => {
 function viewAlbum(i) {
   const a = albums[i]; if (!a) return;
   const steps = a.kind === 'anim' ? animSteps(a) : a.steps.filter(Boolean);
-  openModal(`<h2>Album von ${esc(a.owner.name)}</h2><div class="album mini">${a.kind === 'anim' ? `<div class="anim-stage"><img id="mAnim" alt="Animation"></div>` : steps.map((s) => `<article class="st ${s.type}"><div class="st-who">${avHtml(s.by || {})}<span>${esc((s.by || {}).name || '')}</span></div>${s.type === 'text' ? `<div class="bubble">${esc(s.text || '(nichts geschrieben)')}</div>` : `<div class="pic"><img src="${s.img}" alt=""></div>`}</article>`).join('')}</div>
-    <div class="modal-btns"><button class="btn lime" id="mOk" type="button">Schließen</button></div>`, (c) => {
+  openModal(`<h2>Album von ${esc(a.owner.name)}</h2><div class="album mini">${a.kind === 'anim' ? `<div class="anim-stage"><img id="mAnim" alt="Animation"></div>` : steps.map((s) => `<article class="st ${s.type}"><div class="st-who">${avHtml(s.by || {}, 'xs')}<span class="who-n">${esc((s.by || {}).name || '')}</span></div>${s.type === 'text' ? `<div class="bubble ${s.text && s.text.trim() ? '' : 'empty'}">${esc(s.text && s.text.trim() ? s.text : '(nichts geschrieben)')}</div>` : `<div class="pic"><img src="${s.img}" alt=""></div>`}</article>`).join('')}</div>
+    <div class="modal-btns"><button class="btn red" id="mOk" type="button">Schließen</button></div>`, (c) => {
     let t = null;
-    if (a.kind === 'anim') { let k = 0; const im = c.querySelector('#mAnim'); im.src = steps[0].img; t = setInterval(() => { if (!im.isConnected) { clearInterval(t); return; } k = (k + 1) % steps.length; im.src = steps[k].img; }, 1000 / (a.fps || 6)); }
-    c.querySelector('#mOk').onclick = () => { if (t) clearInterval(t); closeModal(); };
+    if (a.kind === 'anim') {
+      let k = 0; const im = c.querySelector('#mAnim'); const base = 1000 / (a.fps || 6);
+      const tick = () => { if (!im.isConnected) return; im.src = steps[k].img; t = setTimeout(tick, base * (steps[k].hold || 1)); k = (k + 1) % steps.length; };
+      tick();
+    }
+    c.querySelector('#mOk').onclick = () => { if (t) clearTimeout(t); closeModal(); };
   });
 }
 $('againBtn').onclick = () => { if (isHost()) room.send({ t: 'again' }); };
@@ -1086,7 +1198,7 @@ async function browse() {
     const canJoin = l.players < l.max && (l.phase === 'lobby' || (l.late && l.phase !== 'end'));
     return `<div class="browse-item"><span class="bi-ico">${modeById(l.mode).ico}</span><div class="bi-main"><b>Lobby von ${esc(l.host)}</b>
       <small>${l.players}/${l.max} Spieler · ${esc(modeById(l.mode).name)} · ${l.phase === 'lobby' ? 'wartet' : 'läuft (zuschauen)'}</small></div>
-      <button class="btn small lime" data-slot="${l.slot}" type="button" ${canJoin ? '' : 'disabled'}>Rein</button></div>`;
+      <button class="btn small red" data-slot="${l.slot}" type="button" ${canJoin ? '' : 'disabled'}>Rein</button></div>`;
   }).join('');
 }
 $('browseList').addEventListener('click', (e) => { const b = e.target.closest('[data-slot]'); if (b) busy(b, () => joinPub(+b.dataset.slot)); });

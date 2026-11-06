@@ -3,121 +3,182 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Pausenhof – Spiele für die große Pause</title>
-  <meta name="description" content="Pausenhof: kostenlose Multiplayer-Spiele im Browser – ohne Anmeldung, ohne Download. Made by Oskar.">
-  <meta name="theme-color" content="#1d3a2e">
+  <title>Zockbox – Gratis Browser-Spiele mit Freunden</title>
+  <meta name="description" content="Zockbox: kostenlose Multiplayer-Spiele im Browser – ohne Anmeldung, ohne Download. Made by Oskar.">
+  <meta name="theme-color" content="#0a0b12">
   <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Pausenhof">
-  <meta property="og:title" content="Pausenhof – Spiele für die große Pause">
-  <meta property="og:description" content="Kostenlose Party-Spiele im Browser. Lobby erstellen, Code teilen, losspielen.">
+  <meta name="apple-mobile-web-app-title" content="Zockbox">
+  <meta property="og:title" content="Zockbox – Gratis Browser-Spiele mit Freunden">
+  <meta property="og:description" content="Lobby erstellen, Code teilen, zocken. Läuft auf Handy, iPad und Laptop.">
   <meta property="og:image" content="assets/icon-512.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="shared/pausenhof.css">
+  <link rel="preload" href="shared/fonts/Unbounded-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="shared/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="shared/zockbox.css">
 </head>
 <body>
-  <div class="wrap">
-    <header class="topbar">
-      <a class="brand" href="./"><span class="logo">P</span><b>Pausenhof</b></a>
-      <span class="muted ph-topnote" style="font-weight:800;font-size:14px;text-align:right">kostenlos · ohne Anmeldung</span>
-    </header>
+  <div class="zb-bg" aria-hidden="true"></div>
 
-    <div id="installHint" class="note blue ph-install hidden" role="note">
-      <span style="font-size:26px" aria-hidden="true">📲</span>
-      <p>Tipp: Tippe in Safari auf <b>Teilen</b> <span aria-hidden="true">⬆️</span> und dann <b>„Zum Home-Bildschirm“</b> – dann ist Pausenhof wie eine App auf deinem Handy.</p>
-      <button id="installClose" class="ph-x" type="button" aria-label="Hinweis schließen">✕</button>
+  <header class="zb-top">
+    <div class="zb-wrap zb-top-in">
+      <a class="zb-brand" href="./" aria-label="Zockbox Startseite">
+        <span class="zb-mark" aria-hidden="true"><span>Z</span></span>
+        <span class="zb-brand-txt"><b>Zockbox</b><small>made by Oskar</small></span>
+      </a>
+      <a class="zb-me" href="#profil" id="zbMe" aria-label="Dein Profil">
+        <span class="zb-me-av" id="zbMeAv" aria-hidden="true">🐸</span>
+        <span class="zb-me-name" id="zbMeName">Profil</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="zb-wrap">
+    <div id="installHint" class="zb-install hidden" role="note">
+      <span class="zb-install-ic" aria-hidden="true">📲</span>
+      <p>Tipp: In Safari auf <b>Teilen</b> und dann <b>„Zum Home-Bildschirm“</b> – dann startet Zockbox wie eine App.</p>
+      <button id="installClose" class="zb-x" type="button" aria-label="Hinweis schließen">✕</button>
     </div>
 
-    <section class="ph-hero">
-      <div class="ph-hero-text">
-        <h1>Gong! <span class="ph-bell" aria-hidden="true">🔔</span><br><span class="chalk-underline">Pause.</span></h1>
-        <p>Party-Spiele für zwischendurch. Lobby erstellen, Code an deine Freunde schicken, losspielen. Läuft auf Handy, iPad und Laptop – bis zu 30 Leute in einer Runde.</p>
-        <div class="ph-hero-ctas">
-          <a class="btn big" href="games/memelympics/">🏅 Memelympics</a>
-          <a class="btn big mint" href="games/wiki-wandertag/">🧭 Wiki-Wandertag</a>
+    <section class="zb-hero">
+      <div class="zb-hero-text">
+        <span class="zb-kicker"><i class="zb-dot" aria-hidden="true"></i> 2 Spiele live · gratis</span>
+        <h1>Zocken mit Freunden.<br><span class="zb-grad">Direkt im Browser.</span></h1>
+        <p class="zb-lead">Lobby erstellen, Code teilen, losspielen. Kein Konto, kein Download – bis zu 30 Leute pro Runde, auf Handy, iPad und Laptop.</p>
+      </div>
+
+      <section class="zb-panel zb-join" id="beitreten" aria-labelledby="joinTitle">
+        <div class="zb-panel-head">
+          <h2 id="joinTitle">Mit Code beitreten</h2>
+          <span class="zb-hint">4 Buchstaben</span>
+        </div>
+        <form id="joinForm" autocomplete="off" novalidate>
+          <div class="zb-join-row">
+            <input id="joinCode" class="zb-code" type="text" inputmode="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
+            <button id="joinGo" class="zb-btn zb-btn-primary" type="submit">Los</button>
+          </div>
+          <div id="joinGame" class="zb-chips" role="group" aria-label="Spiel auswählen">
+            <button type="button" class="zb-chip" data-game="auto" title="Spiel automatisch erkennen">✨ Auto</button>
+            <button type="button" class="zb-chip" data-game="memelympics">Mach's Meme</button>
+            <button type="button" class="zb-chip" data-game="wiki-wandertag">Wikirennen</button>
+          </div>
+          <p id="joinStatus" class="zb-status hidden" aria-live="polite"></p>
+        </form>
+      </section>
+    </section>
+
+    <div class="zb-sec-head">
+      <h2>Bibliothek</h2>
+      <span class="zb-hint">Tipp auf ein Spiel zum Starten</span>
+    </div>
+
+    <section class="zb-games" aria-label="Spiele">
+      <a class="zb-game" href="games/machs-meme/">
+        <div class="zb-cover zb-cover-meme" aria-hidden="true">
+          <div class="meme-frame">
+            <span class="meme-top">WENN DER CODE</span>
+            <span class="meme-face">😂</span>
+            <span class="meme-bot">SOFORT KLAPPT</span>
+          </div>
+          <span class="zb-cover-burst">LOL</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Party</span></div>
+          <h3>Mach's Meme</h3>
+          <p>Alle bekommen dieselbe Meme-Vorlage, jeder schreibt die witzigste Caption – dann wird abgestimmt.</p>
+          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+      </a>
+
+      <a class="zb-game" href="games/wikirennen/">
+        <div class="zb-cover zb-cover-wiki" aria-hidden="true">
+          <svg class="wiki-net" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+            <g class="wiki-lines">
+              <path d="M40 150 L110 90 L180 120 L250 50"/>
+              <path d="M110 90 L150 40"/><path d="M180 120 L230 165"/><path d="M40 150 L95 175"/><path d="M180 120 L210 75"/>
+            </g>
+            <path class="wiki-route" d="M40 150 L110 90 L180 120 L250 50"/>
+            <g class="wiki-nodes">
+              <circle cx="150" cy="40" r="5"/><circle cx="230" cy="165" r="5"/><circle cx="95" cy="175" r="5"/><circle cx="210" cy="75" r="5"/>
+              <circle class="hot" cx="110" cy="90" r="7"/><circle class="hot" cx="180" cy="120" r="7"/>
+              <circle class="start" cx="40" cy="150" r="10"/><circle class="goal" cx="250" cy="50" r="12"/>
+            </g>
+          </svg>
+          <span class="wiki-w">W</span>
+          <span class="wiki-flag">🏁</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Rennen</span></div>
+          <h3>Wikirennen</h3>
+          <p>Von „Pizza“ zu „Mond“ – nur über Links in Wikipedia. Wer findet den Weg und ist zuerst am Ziel?</p>
+          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+      </a>
+    </section>
+
+    <div class="zb-sec-head">
+      <h2>Bald in der Box</h2>
+    </div>
+    <section class="zb-soon" aria-label="Bald verfügbar">
+      <div class="zb-game zb-small" aria-disabled="true">
+        <div class="zb-cover zb-cover-draw" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice"><path d="M20 90 C40 20, 70 20, 80 60 S120 110, 140 50 S175 20, 185 70" /><path class="b" d="M30 30 q20 20 40 0 t40 0" /></svg>
+          <span class="draw-pen">✏️</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-bald">BALD</span></div>
+          <h3>Kritzel-Duell</h3>
+          <p>Einer malt, alle raten. Wer erkennt das Gekritzel zuerst?</p>
         </div>
       </div>
-
-      <div class="ph-side">
-        <section class="note paper tilt-r ph-card" aria-labelledby="cardTitle">
-          <h2 id="cardTitle">🪪 Schülerausweis</h2>
-          <div class="ph-card-row">
-            <button id="phAvatar" class="ph-avatar-btn" type="button" aria-label="Avatar auswählen" aria-expanded="false" aria-controls="phAvatarGrid">🐸</button>
-            <input id="phName" type="text" maxlength="16" placeholder="Dein Name" autocomplete="nickname" enterkeyhint="done" aria-label="Dein Name">
-            <button id="phDice" class="btn small ph-dice" type="button" title="Zufälliger Name und Avatar" aria-label="Zufälliger Name und Avatar">🎲</button>
-          </div>
-          <div id="phAvatarGrid" class="ph-avatar-grid hidden" role="group" aria-label="Avatare"></div>
-          <div class="ph-card-foot">
-            <span>Gilt für alle Spiele. Tipp auf den Avatar zum Ändern.</span>
-            <span id="phSaved" class="ph-saved" aria-live="polite">✓ gespeichert</span>
-          </div>
-        </section>
-
-        <section class="note tilt-l ph-join" aria-labelledby="joinTitle">
-          <h2 id="joinTitle">🔑 Mit Code beitreten</h2>
-          <form id="joinForm" autocomplete="off" novalidate>
-            <div id="joinGame" class="ph-chips" role="group" aria-label="Spiel">
-              <button type="button" class="ph-chip" data-game="auto">🔎 Automatisch</button>
-              <button type="button" class="ph-chip" data-game="memelympics">🏅 Memelympics</button>
-              <button type="button" class="ph-chip" data-game="wiki-wandertag">🧭 Wiki-Wandertag</button>
-            </div>
-            <div class="ph-join-row">
-              <input id="joinCode" class="ph-code" type="text" inputmode="text" maxlength="4" placeholder="CODE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
-              <button id="joinGo" class="btn" type="submit">Los!</button>
-            </div>
-            <p id="joinStatus" class="ph-status hidden" aria-live="polite"></p>
-          </form>
-        </section>
+      <div class="zb-game zb-small" aria-disabled="true">
+        <div class="zb-cover zb-cover-lie" aria-hidden="true">
+          <span class="lie-q q1">?</span><span class="lie-q q2">?</span><span class="lie-q q3">?</span>
+          <span class="lie-mask">🕵️</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-bald">BALD</span></div>
+          <h3>Wer lügt?</h3>
+          <p>Alle kennen das Wort – nur einer nicht. Findet den Bluffer.</p>
+        </div>
       </div>
     </section>
 
-    <div class="ph-section-head">
-      <h2>Spiele</h2>
-      <span class="muted" style="font-weight:700">Tipp auf einen Zettel zum Spielen</span>
+    <div class="zb-lower">
+    <section class="zb-panel zb-profile" id="profil" aria-labelledby="profTitle">
+      <div class="zb-panel-head">
+        <h2 id="profTitle">Dein Profil</h2>
+        <span id="phSaved" class="zb-saved" aria-live="polite">✓ gespeichert</span>
+      </div>
+      <div class="zb-prof-row">
+        <button id="phAvatar" class="zb-avatar" type="button" aria-label="Avatar auswählen" aria-expanded="false" aria-controls="phAvatarGrid">🐸</button>
+        <input id="phName" class="zb-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="nickname" enterkeyhint="done" aria-label="Dein Name">
+        <button id="phDice" class="zb-btn zb-btn-ghost zb-dice" type="button" title="Zufälliger Name und Avatar" aria-label="Zufälliger Name und Avatar">🎲</button>
+      </div>
+      <div id="phAvatarGrid" class="zb-avatar-grid hidden" role="group" aria-label="Avatare"></div>
+      <p class="zb-hint zb-prof-foot">Gilt für alle Spiele und bleibt nur auf diesem Gerät. Tipp auf den Avatar zum Ändern.</p>
+    </section>
+
+    <section class="zb-how" aria-label="So funktioniert's">
+      <div class="zb-step"><span class="zb-num">1</span><div><b>Lobby erstellen</b><p>Dein Browser wird zum Spielserver. Kein Konto, kein Download.</p></div></div>
+      <div class="zb-step"><span class="zb-num">2</span><div><b>Code teilen</b><p>Freunde tippen den 4-Buchstaben-Code ein – hier oder direkt im Spiel.</p></div></div>
+      <div class="zb-step"><span class="zb-num">3</span><div><b>Zocken</b><p>Die Daten laufen direkt zwischen euren Geräten (WebRTC). Kein Zockbox-Server liest mit.</p></div></div>
+    </section>
     </div>
-    <section class="ph-games">
-      <a class="ph-game note tilt-l" href="games/memelympics/">
-        <div class="ph-tags"><span class="ph-tag live">LIVE</span><span class="ph-tag">2–30 Spieler</span></div>
-        <span class="ph-icon" aria-hidden="true">🏅</span>
-        <h3>Memelympics</h3>
-        <p>Schnapp dir eine Meme-Vorlage, schreib die witzigste Caption, dann wird bewertet. Wer holt Gold?</p>
-        <span class="btn small ph-play">Spielen →</span>
-      </a>
-      <a class="ph-game note mint tilt-r" href="games/wiki-wandertag/">
-        <div class="ph-tags"><span class="ph-tag live">LIVE</span><span class="ph-tag">2–30 Spieler</span></div>
-        <span class="ph-icon" aria-hidden="true">🧭</span>
-        <h3>Wiki-Wandertag</h3>
-        <p>Von „Pizza“ zu „Mond“ – nur über Links in Wikipedia. Wer findet den kürzesten Weg und ist zuerst am Ziel?</p>
-        <span class="btn small ph-play">Spielen →</span>
-      </a>
-      <div class="ph-game note pink tilt-l soon" aria-disabled="true">
-                <span class="ph-icon" aria-hidden="true">✏️</span>
-        <h3>Kritzelkönig</h3>
-        <p>Einer malt, alle raten. Wer erkennt das Gekritzel zuerst?</p>
-      </div>
-      <div class="ph-game note blue tilt-r soon" aria-disabled="true">
-                <span class="ph-icon" aria-hidden="true">🕵️</span>
-        <h3>Wer lügt?</h3>
-        <p>Alle kennen das Wort, nur einer nicht. Findet den Hochstapler.</p>
-      </div>
-    </section>
+  </main>
 
-    <section class="ph-how" aria-label="So funktioniert's">
-      <div class="ph-step"><div class="ph-num">1</div><b>Lobby erstellen</b><p class="muted">Dein Browser wird zum Spielserver. Kein Konto, kein Download.</p></div>
-      <div class="ph-step"><div class="ph-num">2</div><b>Code teilen</b><p class="muted">Freunde geben den 4-Buchstaben-Code ein – hier oder direkt im Spiel, egal in welchem WLAN.</p></div>
-      <div class="ph-step"><div class="ph-num">3</div><b>Spielen</b><p class="muted">Die Daten laufen direkt zwischen euren Geräten (WebRTC). Kein Pausenhof-Server liest mit.</p></div>
-    </section>
+  <footer class="zb-foot">
+    <div class="zb-wrap">
+      <div class="zb-sig">made by <b>Oskar</b></div>
+      <p>Zockbox · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA 4.0)</p>
+    </div>
+  </footer>
 
-    <footer class="footer">
-      <div class="sig">made by Oskar</div>
-      <div>Pausenhof · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA)</div>
-    </footer>
-  </div>
   <script type="module" src="shared/hub.js"></script>
 </body>
 </html>

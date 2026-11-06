@@ -1,4 +1,4 @@
-// Pausenhof Netzwerk-Kern – wiederverwendbar für alle Spiele.
+// Zockbox Netzwerk-Kern – wiederverwendbar für alle Spiele.
 // Prinzip: Der Browser, der eine Lobby erstellt, ist der "Host" (Spielserver).
 // Der kostenlose PeerJS-Server vermittelt nur den ersten Kontakt (Signaling),
 // danach laufen alle Daten direkt per WebRTC zwischen den Geräten.

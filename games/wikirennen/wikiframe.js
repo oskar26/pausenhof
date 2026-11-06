@@ -1,21 +1,6 @@
-// Wiki-Wandertag – Artikelrahmen im Wikipedia-Look (Shadow-DOM, damit Wikipedia-CSS
-// und Pausenhof-CSS sich nicht in die Quere kommen). made by Oskar
+// Wikirennen – Artikelrahmen im Wikipedia-Look (Shadow-DOM, damit das echte Wikipedia-CSS
+// und das Spiel-CSS sich nicht in die Quere kommen). made by Oskar
 import { loadWikiCss } from './wiki.js';
-
-const LOGO = `<svg class="wwt-logo-svg" viewBox="0 0 64 64" aria-hidden="true">
-  <defs><radialGradient id="g" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#d9dbde"/><stop offset="1" stop-color="#8f9399"/></radialGradient></defs>
-  <circle cx="32" cy="32" r="29" fill="url(#g)" stroke="#6b6f75" stroke-width="1.2"/>
-  <g fill="none" stroke="#7d8187" stroke-width="1" opacity=".7">
-    <ellipse cx="32" cy="32" rx="12" ry="29"/><ellipse cx="32" cy="32" rx="22" ry="29"/>
-    <path d="M4 24h56M3 32h58M4 40h56M8 16h48M8 48h48"/>
-  </g>
-  <g font-family="Georgia,serif" font-weight="bold" fill="#3b3e42">
-    <text x="15" y="27" font-size="10">W</text><text x="34" y="21" font-size="8">Ω</text>
-    <text x="40" y="41" font-size="9">文</text><text x="18" y="47" font-size="8">Ж</text>
-  </g>
-  <path d="M10 50 C 20 40, 26 52, 32 38 S 46 26, 50 14" fill="none" stroke="#c0392b" stroke-width="2.2" stroke-dasharray="3 2.4" stroke-linecap="round"/>
-  <path d="M50 14 v-9 l7 3 -7 3" fill="#c0392b" stroke="#7a1f16" stroke-width=".8"/>
-</svg>`;
 
 export class WikiFrame {
   constructor(hostEl, { onNavigate, onBlocked } = {}) {
@@ -30,25 +15,20 @@ export class WikiFrame {
       <link rel="stylesheet" href="${frameCss}">
       <div class="wwt-html vector-feature-custom-font-size-clientpref-1 skin-theme-clientpref-day">
       <div class="wwt-body skin--responsive skin-vector ltr">
-        <header class="wwt-header">
-          <span class="wwt-burger" aria-hidden="true">☰</span>
-          <div class="wwt-logo">${LOGO}<div class="wwt-wordmark"><b>Wiki-Wandertag</b><small>Die freie Wanderkarte</small></div></div>
-          <div class="wwt-search" title="Suchen ist beim Wandertag verboten 😉"><span>🔍</span> <span class="ph">Suche ist heute gesperrt…</span></div>
-        </header>
         <div class="wwt-container">
           <nav class="wwt-toc"><div class="wwt-toc-h">Inhalt</div><ul class="wwt-toc-list"></ul></nav>
           <main class="mw-body wwt-main">
-            <div class="wwt-titlebar"><h1 class="firstHeading mw-first-heading"><span class="mw-page-title-main">Wiki-Wandertag</span></h1><span class="wwt-langbtn">文A <span class="wwt-langname"></span></span></div>
+            <div class="wwt-titlebar"><h1 class="firstHeading mw-first-heading"><span class="mw-page-title-main">Wikirennen</span></h1><span class="wwt-langbtn"><svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px;vertical-align:-4px"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> <span class="wwt-langname"></span></span></div>
             <div class="wwt-tabs"><span class="sel">Artikel</span><span>Diskussion</span><span class="gap"></span><span class="sel">Lesen</span><span>Bearbeiten</span><span class="hide-s">Versionsgeschichte</span></div>
             <div class="vector-body mw-body-content" id="bodyContent">
-              <div class="wwt-tagline">Aus Wiki-Wandertag, der freien Wanderkarte durch Wikipedia</div>
+              <div class="wwt-tagline">Aus Wikipedia, der freien Enzyklopädie</div>
               <div class="wwt-redirect"></div>
               <div class="wwt-content"></div>
             </div>
-            <div class="wwt-footer">Artikeltext und Bilder: Wikipedia und Wikimedia Commons, Lizenz CC BY-SA 4.0 bzw. laut Dateibeschreibung. Wiki-Wandertag ist ein Pausenhof-Spiel und nicht mit der Wikimedia Foundation verbunden.</div>
+            <div class="wwt-footer">Artikeltext und Bilder: Wikipedia und Wikimedia Commons, Lizenz CC BY-SA 4.0 bzw. laut Dateibeschreibung. Wikirennen ist ein Spiel in der Zockbox und nicht mit der Wikimedia Foundation verbunden.</div>
           </main>
         </div>
-        <div class="wwt-loading hidden"><div class="wwt-bar"></div><div class="wwt-loadtxt">Wandere…</div></div>
+        <div class="wwt-loading hidden"><div class="wwt-bar"></div><div class="wwt-loadtxt">Lädt …</div></div>
       </div></div>`;
     this.$ = (sel) => this.root.querySelector(sel);
     this.$('.wwt-body').addEventListener('click', (e) => this._click(e));
@@ -64,11 +44,12 @@ export class WikiFrame {
     if (this.lang === lang) return;
     this.lang = lang;
     this.$('.wwt-langname').textContent = lang === 'en' ? 'English' : 'Deutsch';
+    this.$('.wwt-tagline').textContent = lang === 'en' ? 'From Wikipedia, the free encyclopedia' : 'Aus Wikipedia, der freien Enzyklopädie';
     const css = await loadWikiCss(lang);
     if (this.lang === lang) this.$('#wikiCss').textContent = css;
   }
 
-  setLoading(on, text = 'Wandere…') {
+  setLoading(on, text = 'Lädt …') {
     this.$('.wwt-loading').classList.toggle('hidden', !on);
     this.$('.wwt-loadtxt').textContent = text;
   }
@@ -80,6 +61,7 @@ export class WikiFrame {
     this.$('.mw-page-title-main').textContent = article.display || article.title;
     this.$('.wwt-redirect').textContent = article.redirectedFrom ? `(Weitergeleitet von ${article.redirectedFrom})` : '';
     content.setAttribute('lang', lang || this.lang || 'de');
+    this.$('.wwt-langname').textContent = (lang || this.lang) === 'en' ? 'English' : 'Deutsch';
     content.innerHTML = article.html;
     this._wrapTables(content);
     this._buildToc(content);

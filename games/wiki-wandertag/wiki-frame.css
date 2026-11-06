@@ -1,0 +1,106 @@
+/* Wiki-Wandertag – Wikipedia-Rahmen (im Shadow-DOM). Nachgebaut im Stil von Vector 2022. made by Oskar */
+:host { all: initial; display: block; }
+.hidden { display: none !important; }
+
+.wwt-html, .wwt-body { height: auto !important; min-height: 0 !important; }
+.wwt-html {
+  display: block; background: #fff; color: #202122;
+  font-family: sans-serif; font-size: 16px; line-height: 1.6;
+  border-radius: 8px; overflow: hidden; -webkit-text-size-adjust: 100%;
+  container-type: inline-size; container-name: wwt;
+  box-shadow: 0 6px 0 rgba(0,0,0,.35);
+}
+.wwt-body { position: relative; margin: 0; }
+
+/* Kopfzeile */
+.wwt-header { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid #eaecf0; background: #fff; }
+.wwt-burger { font-size: 20px; color: #72777d; width: 28px; text-align: center; }
+.wwt-logo { display: flex; align-items: center; gap: 8px; }
+.wwt-logo-svg { width: 44px; height: 44px; flex: none; }
+.wwt-wordmark { display: flex; flex-direction: column; line-height: 1.05; }
+.wwt-wordmark b { font-family: 'Linux Libertine', 'Georgia', 'Times', serif; font-weight: 400; font-size: 21px; letter-spacing: .02em; font-variant: small-caps; color: #000; }
+.wwt-wordmark small { font-family: 'Linux Libertine', 'Georgia', 'Times', serif; font-size: 12px; color: #54595d; font-style: italic; }
+.wwt-search { flex: 1; max-width: 460px; margin-left: 12px; border: 1px solid #a2a9b1; border-radius: 2px; padding: 6px 10px; color: #72777d; font-size: 14px; background: #f8f9fa; cursor: not-allowed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Layout */
+.wwt-container { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 24px; padding: 0 24px 0 16px; max-width: 1240px; margin: 0 auto; }
+.wwt-toc { position: sticky; top: var(--wwt-top, 10px); align-self: start; max-height: calc(100vh - var(--wwt-top, 10px) - 10px); overflow-y: auto; padding: 18px 0 18px 4px; font-size: 14px; }
+.wwt-toc.empty { visibility: hidden; }
+.wwt-toc-h { font-weight: 700; padding-bottom: 6px; border-bottom: 1px solid #c8ccd1; margin-bottom: 6px; }
+.wwt-toc-list { list-style: none; margin: 0; padding: 0; }
+.wwt-toc-list li { padding: 3px 0; color: #3366cc; cursor: pointer; line-height: 1.3; }
+.wwt-toc-list li:hover { text-decoration: underline; }
+.wwt-toc-list li.l3 { padding-left: 14px; font-size: 13px; }
+
+.wwt-main.mw-body { display: block !important; padding: 0 0 24px; min-width: 0; margin: 0; }
+.wwt-titlebar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 1px solid #a2a9b1; padding-top: 18px; }
+.wwt-titlebar h1.firstHeading { font-family: 'Linux Libertine', 'Georgia', 'Times', serif; font-size: 1.8em; font-weight: 400; line-height: 1.375; margin: 0 0 2px; padding: 0; border: 0; color: #000; overflow-wrap: anywhere; }
+.wwt-langbtn { flex: none; color: #3366cc; font-size: 14px; font-weight: 700; padding: 6px 4px; white-space: nowrap; }
+.wwt-tabs { display: flex; gap: 14px; font-size: 14px; border-bottom: 1px solid #eaecf0; padding: 6px 0 0; margin-bottom: 10px; color: #3366cc; overflow: hidden; white-space: nowrap; }
+.wwt-tabs span { padding-bottom: 6px; opacity: .55; }
+.wwt-tabs span.sel { color: #202122; border-bottom: 2px solid #202122; opacity: 1; }
+.wwt-tabs .gap { flex: 1; opacity: 0; }
+.wwt-tagline { font-size: 12.8px; color: #54595d; margin: 6px 0 10px; }
+.wwt-redirect { font-size: 13px; color: #54595d; margin-top: -6px; margin-bottom: 8px; }
+.wwt-redirect:empty { display: none; }
+.wwt-footer { margin-top: 30px; border-top: 1px solid #c8ccd1; padding-top: 10px; font-size: 12px; color: #54595d; }
+
+/* Inhalt – Ergänzungen zum Wikipedia-CSS */
+.wwt-content { overflow-wrap: break-word; }
+.wwt-content a { -webkit-touch-callout: none; cursor: pointer; }
+.wwt-content a[data-wwt="article"] { color: #3366cc; }
+.wwt-content a[data-wwt="external"], .wwt-content a[data-wwt="ns"], .wwt-content a[data-wwt="file"] { cursor: not-allowed; }
+.wwt-content a[data-wwt="external"] { color: #3366cc; opacity: .75; }
+.wwt-content a[data-wwt="red"] { color: #d73333; cursor: not-allowed; }
+.wwt-content img { max-width: 100%; height: auto; }
+.wwt-content .wwt-tw { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; margin-bottom: 1em; }
+.wwt-content .wwt-tw > table { margin-top: 0; margin-bottom: 0; }
+.wwt-content #coordinates, .wwt-content .coordinates.plainlinks-print { position: static !important; display: block; font-size: 12px; text-align: right; }
+.wwt-content .mw-heading, .wwt-content h2, .wwt-content h3 { scroll-margin-top: 90px; }
+.wwt-content .wwt-flash, .wwt-content .wwt-flash + * { background: #fef6e7; transition: background .4s; }
+.wwt-content .navbox, .wwt-content .navbox-styles { max-width: 100%; }
+.wwt-content .mw-references-wrap, .wwt-content .references { font-size: 90%; }
+.wwt-locked .wwt-content a[data-wwt="article"] { cursor: default; }
+
+/* Laden */
+.wwt-loading { position: absolute; inset: 0; background: rgba(255,255,255,.72); z-index: 20; display: flex; flex-direction: column; align-items: center; padding-top: 120px; }
+.wwt-bar { position: absolute; top: 0; left: 0; height: 3px; width: 40%; background: #3366cc; animation: wwtbar 1s ease-in-out infinite; }
+@keyframes wwtbar { 0% { left: -40%; } 100% { left: 100%; } }
+.wwt-loadtxt { font-family: 'Linux Libertine', Georgia, serif; font-size: 22px; color: #54595d; position: sticky; top: 45vh; }
+
+/* Rahmen schmal (z. B. iPad hochkant mit Seitenleiste) → Inhaltsverzeichnis ausblenden */
+@container wwt (max-width: 900px) {
+  .wwt-container { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
+  .wwt-toc { display: none; }
+}
+/* Tablet */
+@media (max-width: 1000px) {
+  .wwt-container { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
+  .wwt-toc { display: none; }
+}
+/* Handy */
+@media (max-width: 640px) {
+  .wwt-html { font-size: 15px; border-radius: 6px; }
+  .wwt-header { gap: 8px; padding: 8px 10px; }
+  .wwt-burger { display: none; }
+  .wwt-logo-svg { width: 34px; height: 34px; }
+  .wwt-wordmark b { font-size: 17px; }
+  .wwt-wordmark small { font-size: 10px; }
+  .wwt-search { margin-left: 0; padding: 5px 8px; font-size: 12px; }
+  .wwt-search .ph { display: none; }
+  .wwt-search { flex: none; }
+  .wwt-container { padding: 0 12px; }
+  .wwt-titlebar h1.firstHeading { font-size: 1.6em; }
+  .wwt-langbtn .wwt-langname, .wwt-tabs .hide-s { display: none; }
+  .wwt-content .wwt-tw.wwt-tw-float { float: none !important; margin-left: 0 !important; margin-right: 0 !important; }
+  .wwt-content .wwt-tw > table.infobox, .wwt-content .wwt-tw > table.toccolours, .wwt-content .wwt-tw > table.sidebar { width: 100% !important; }
+  .wwt-content figure, .wwt-content .thumb, .wwt-content .tright, .wwt-content .tleft,
+  .wwt-content figure.mw-halign-right, .wwt-content figure.mw-halign-left { float: none !important; margin: .5em auto 1em !important; clear: both; }
+  .wwt-content figure img, .wwt-content .thumbinner { max-width: 100% !important; }
+  .wwt-content .thumbinner { width: auto !important; }
+  .wwt-content .gallery { margin-left: 0 !important; }
+  .wwt-content div[style*="float"] { float: none !important; margin-left: 0 !important; margin-right: 0 !important; max-width: 100%; }
+  .wwt-content .navbox { display: none; }
+  .wwt-content .thumbinner, .wwt-content figure, .wwt-content div[style*="width"] { max-width: 100% !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .wwt-content pre { white-space: pre-wrap; }
+}

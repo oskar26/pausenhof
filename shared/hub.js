@@ -4,12 +4,11 @@ import { AVATARS, getProfile, setName, setAvatar, randomName, NAME_MAX } from '.
 
 // Spiele, die per Code beitreten können.
 // id = interner Schlüssel für die Auswahl-Chips (data-game in index.html).
-// peerPrefixes = mögliche Peer-ID-Präfixe (aus shared/net.js: `pausenhof-${GAME_ID}-p-CODE`).
-// Das Präfix 'pausenhof-' und die GAME_IDs bleiben absichtlich so, damit alte und neue Versionen zusammenpassen.
+// peerPrefixes = mögliche Peer-ID-Präfixe (aus shared/net.js: `zockbox-${GAME_ID}-p-CODE`).
 // Wenn ein Spiel seine GAME_ID ändert, hier anpassen.
 const GAMES = [
-  { id: 'memelympics', name: "Mach's Meme", icon: '😂', path: 'games/machs-meme/', peerPrefixes: ['pausenhof-memelympics-v1-', 'pausenhof-memelympics-'] },
-  { id: 'wiki-wandertag', name: 'Wikirennen', icon: '🏁', path: 'games/wikirennen/', peerPrefixes: ['pausenhof-wiki-wandertag-v1-', 'pausenhof-wiki-wandertag-', 'pausenhof-wikiwandertag-v1-'] },
+  { id: 'machs-meme', name: "Mach's Meme", icon: '😂', path: 'games/machs-meme/', peerPrefixes: ['zockbox-machs-meme-v1-'] },
+  { id: 'wikirennen', name: 'Wikirennen', icon: '🏁', path: 'games/wikirennen/', peerPrefixes: ['zockbox-wikirennen-v1-'] },
 ];
 const PEERJS_URL = new URL('./vendor/peerjs.min.js', import.meta.url).href;
 

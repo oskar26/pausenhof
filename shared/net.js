@@ -59,7 +59,7 @@ function ask(conn, msg, timeout = 3000) {
 export class Room {
   constructor(gameId) {
     this.gameId = gameId;
-    this.prefix = `pausenhof-${gameId}-`;
+    this.prefix = `zockbox-${gameId}-`;
     this.peer = null;
     this.isHost = false;
     this.conns = new Map(); // nur Host: id -> conn
@@ -158,7 +158,7 @@ export class Room {
 
   // Fragt alle öffentlichen Slots ab. Gibt [{slot, ...info}] zurück.
   static async listPublic(gameId) {
-    const prefix = `pausenhof-${gameId}-`;
+    const prefix = `zockbox-${gameId}-`;
     const peer = await makePeer();
     const results = await Promise.all(
       Array.from({ length: PUBLIC_SLOTS }, (_, i) => i + 1).map(async (n) => {

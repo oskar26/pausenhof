@@ -24,7 +24,7 @@ if (typeof window.Peer === 'function' && !window.Peer.__wrQuiet) {
   window.Peer.__wrQuiet = true;
 }
 
-const GAME_ID = 'wiki-wandertag-v1'; // bleibt so – die Zockbox-Startseite findet Lobbys über diese ID
+const GAME_ID = 'wikirennen-v1'; // bleibt so – die Zockbox-Startseite findet Lobbys über diese ID
 const AVATARS = ['🐸','🦊','🐼','🐵','🐱','🐶','🦄','🐙','🤖','👽','🦖','🐧','🐷','🦁','🐨','🐯','🐮','🦉','🐝','🍕','🌮','👻','🤡','😎','🥸','🧠','🗿','🐢','🏎️','🚀'];
 const POINTS = [100, 80, 65, 55, 45, 40, 35, 30, 25, 20];
 const SHORT_BONUS = 10;

@@ -5,7 +5,7 @@ import { PACKS, buildPool } from './templates.js';
 import { renderMeme, redrawMeme, memeToPngBlob, memeToGifBlob, saveBlob, captionFontReady } from './memerender.js';
 import { sfx } from './sound.js';
 
-const GAME_ID = 'memelympics-v1'; // nicht ändern – die Zockbox-Startseite sucht Lobbys unter dieser ID
+const GAME_ID = 'machs-meme-v1'; // nicht ändern – die Zockbox-Startseite sucht Lobbys unter dieser ID
 const AVATARS = ['🐸','🦊','🐼','🐵','🐱','🐶','🦄','🐙','🤖','👽','🦖','🐧','🐷','🦁','🐨','🐯','🐮','🦉','🐝','🍕','🌮','👻','🤡','😎','🥸','🧠','🗿','🐢'];
 const AV_COLORS = ['#ffb3dc', '#a8e6ff', '#c3f7a0', '#ffe28a', '#d6c2ff', '#ffc9a3', '#9ff5e1', '#ffaaa8'];
 const NAME_A = ['Salty', 'Short', 'Large', 'Sus', 'Old', 'Right', 'Next', 'Red', 'Big', 'Small', 'Fame', 'Dank', 'Lazy', 'Cringe', 'Based', 'Turbo', 'Mini', 'Mega', 'Wild', 'Chill'];

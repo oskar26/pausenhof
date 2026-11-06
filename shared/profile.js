@@ -1,4 +1,4 @@
-// Pausenhof – gemeinsames Spielerprofil (Name + Emoji-Avatar).
+// Zockbox – gemeinsames Spielerprofil (Name + Emoji-Avatar).
 // Alle Spiele lesen dieselben localStorage-Schlüssel:
 //   ph_name   – Anzeigename (max. 16 Zeichen)
 //   ph_avatar – ein Emoji
@@ -28,8 +28,8 @@ export function setAvatar(emoji) {
 }
 
 export function randomName() {
-  const names = ['Kreide-Ninja', 'Mathe-Profi', 'Mensa-Boss', 'Tafelkönig', 'Pausen-Profi', 'Brezel-Fan',
-    'Turbo-Streber', 'Hofpirat', 'Klassenclown', 'Gong-Held', 'Tafelschwamm', 'Hausi-Muffel'];
+  const names = ['Pixel-Ninja', 'Turbo-Toast', 'Meme-Lord', 'Quiz-Hai', 'Combo-King', 'Lag-Monster',
+    'Speedrunner', 'Noob-Slayer', 'Glitch-Boss', 'Cookie-Clicker', 'Turbo-Taco', 'Respawn-Rudi'];
   const n = names[Math.floor(Math.random() * names.length)];
   return `${n}${Math.floor(10 + Math.random() * 90)}`.slice(0, NAME_MAX);
 }

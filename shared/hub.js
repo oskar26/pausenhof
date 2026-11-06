@@ -1,13 +1,15 @@
-// Pausenhof – Startseite (Hub): Profil, "Mit Code beitreten", iPhone-Installationshinweis.
+// Zockbox – Startseite (Bibliothek): Profil, "Mit Code beitreten", iPhone-Installationshinweis.
 // made by Oskar
 import { AVATARS, getProfile, setName, setAvatar, randomName, NAME_MAX } from './profile.js';
 
 // Spiele, die per Code beitreten können.
+// id = interner Schlüssel für die Auswahl-Chips (data-game in index.html).
 // peerPrefixes = mögliche Peer-ID-Präfixe (aus shared/net.js: `pausenhof-${GAME_ID}-p-CODE`).
+// Das Präfix 'pausenhof-' und die GAME_IDs bleiben absichtlich so, damit alte und neue Versionen zusammenpassen.
 // Wenn ein Spiel seine GAME_ID ändert, hier anpassen.
 const GAMES = [
-  { id: 'memelympics', name: 'Memelympics', icon: '🏅', path: 'games/memelympics/', peerPrefixes: ['pausenhof-memelympics-v1-', 'pausenhof-memelympics-'] },
-  { id: 'wiki-wandertag', name: 'Wiki-Wandertag', icon: '🧭', path: 'games/wiki-wandertag/', peerPrefixes: ['pausenhof-wiki-wandertag-v1-', 'pausenhof-wiki-wandertag-', 'pausenhof-wikiwandertag-v1-'] },
+  { id: 'memelympics', name: "Mach's Meme", icon: '😂', path: 'games/machs-meme/', peerPrefixes: ['pausenhof-memelympics-v1-', 'pausenhof-memelympics-'] },
+  { id: 'wiki-wandertag', name: 'Wikirennen', icon: '🏁', path: 'games/wikirennen/', peerPrefixes: ['pausenhof-wiki-wandertag-v1-', 'pausenhof-wiki-wandertag-', 'pausenhof-wikiwandertag-v1-'] },
 ];
 const PEERJS_URL = new URL('./vendor/peerjs.min.js', import.meta.url).href;
 
@@ -21,7 +23,7 @@ function toast(msg, ms = 2600) {
 }
 
 // ---------------------------------------------------------------------------
-// Profil (Schülerausweis)
+// Profil
 // ---------------------------------------------------------------------------
 function initProfile() {
   const prof = getProfile();
@@ -29,6 +31,13 @@ function initProfile() {
   nameIn.maxLength = NAME_MAX;
   nameIn.value = prof.name;
   avBtn.textContent = prof.avatar;
+  const syncMe = () => {
+    const p = getProfile();
+    const av = $('zbMeAv'), nm = $('zbMeName');
+    if (av) av.textContent = p.avatar;
+    if (nm) nm.textContent = p.name || 'Profil';
+  };
+  syncMe();
 
   grid.innerHTML = '';
   for (const a of AVATARS) {
@@ -53,12 +62,13 @@ function initProfile() {
 
   let timer;
   const saved = () => {
+    syncMe();
     const s = $('phSaved');
     s.classList.add('on'); clearTimeout(timer);
     timer = setTimeout(() => s.classList.remove('on'), 1400);
   };
   nameIn.addEventListener('input', () => { setName(nameIn.value); saved(); });
-  nameIn.addEventListener('blur', () => { nameIn.value = setName(nameIn.value); });
+  nameIn.addEventListener('blur', () => { nameIn.value = setName(nameIn.value); syncMe(); });
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameIn.blur(); });
   $('phDice').onclick = () => {
     nameIn.value = setName(randomName());
@@ -158,25 +168,30 @@ function initJoin() {
 
     if (selected !== 'auto') { go(GAMES.find((g) => g.id === selected), code); return; }
 
-    btn.disabled = true;
+    // Kein btn.disabled: in Chromium "verschluckt" ein während des Klicks deaktivierter Button danach manchmal Klicks.
+    if (btn.getAttribute('aria-busy') === 'true') return;
+    btn.setAttribute('aria-busy', 'true');
     const old = btn.textContent;
     btn.textContent = 'Suche …';
     setStatus('Ich suche die Lobby in allen Spielen …', 'wait');
     try {
       const found = await findGame(code);
       if (found.length === 1) { setStatus(`Gefunden: ${found[0].icon} ${found[0].name}!`, 'ok'); go(found[0], code); return; }
-      if (found.length > 1) setStatus('Den Code gibt es in mehreren Spielen. Tipp oben auf das richtige Spiel.', 'err');
-      else setStatus('Keine offene Lobby mit diesem Code gefunden. Stimmt der Code? Oder wähl das Spiel oben aus.', 'err');
+      if (found.length > 1) setStatus('Den Code gibt es in mehreren Spielen. Tipp unten auf das richtige Spiel.', 'err');
+      else setStatus('Keine offene Lobby mit diesem Code gefunden. Stimmt der Code? Oder wähl das Spiel unten aus.', 'err');
     } catch (err) {
-      setStatus('Konnte nicht automatisch suchen. Wähl bitte oben das Spiel aus.', 'err');
+      setStatus('Konnte nicht automatisch suchen. Wähl bitte unten das Spiel aus.', 'err');
     } finally {
-      btn.disabled = false; btn.textContent = old;
+      btn.removeAttribute('aria-busy'); btn.textContent = old;
     }
   });
 
   // ?join=ABCD in der Hub-URL füllt das Feld vor
   const pre = new URLSearchParams(location.search).get('join');
-  if (pre) input.value = cleanCode(pre);
+  if (pre) {
+    input.value = cleanCode(pre);
+    setStatus('Code eingetragen – tipp auf „Los“, um beizutreten.', 'ok');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -200,3 +215,4 @@ initProfile();
 initJoin();
 initInstallHint();
 window.phToast = toast;
+window.zbToast = toast;

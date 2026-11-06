@@ -1,14 +1,14 @@
 {
-  "name": "Pausenhof – Spiele für die große Pause",
-  "short_name": "Pausenhof",
+  "name": "Zockbox – Gratis Browser-Spiele",
+  "short_name": "Zockbox",
   "description": "Kostenlose Multiplayer-Spiele im Browser. Made by Oskar.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1d3a2e",
-  "theme_color": "#1d3a2e",
+  "background_color": "#0a0b12",
+  "theme_color": "#0a0b12",
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

@@ -1,13 +1,36 @@
-// Wiki-Wandertag – Wikipedia-Anbindung (läuft komplett im Browser, CORS über origin=*)
+// Wikirennen – Wikipedia-Anbindung (läuft komplett im Browser, CORS über origin=*)
 // made by Oskar
 import { POPULAR } from './popular.js';
+import { COUNTRIES } from './data.js';
 
 export const LANGS = { de: 'Deutsch', en: 'English' };
 const api = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const rest = (lang) => `https://${lang}.wikipedia.org/api/rest_v1`;
 
-const FORBIDDEN = { de: ['Deutschland', 'Vereinigte Staaten'], en: ['Germany', 'United States'] };
-export function forbiddenTitles(lang) { return FORBIDDEN[lang] || []; }
+// Verbotene Artikel: 0 = keine, 1 = USA, 2 = USA & Deutschland, 3 = alle Staaten
+const USA = { de: 'Vereinigte Staaten', en: 'United States' };
+const GER = { de: 'Deutschland', en: 'Germany' };
+export const BAN_NAMES = ['keine', 'Keine USA', 'Keine USA & kein Deutschland', 'Keine Länderartikel'];
+export function forbiddenTitles(lang, ban = 2) {
+  ban = +ban || 0;
+  if (!ban) return [];
+  if (ban === 1) return [USA[lang]].filter(Boolean);
+  if (ban === 2) return [USA[lang], GER[lang]].filter(Boolean);
+  return COUNTRIES[lang] || [USA[lang], GER[lang]].filter(Boolean);
+}
+export function isForbidden(lang, ban, title) {
+  if (!+ban) return false;
+  const n = normTitle(title);
+  return forbiddenTitles(lang, ban).some((f) => normTitle(f) === n);
+}
+
+// Nimmt Titel oder Wikipedia-Links („https://de.wikipedia.org/wiki/Mond“, auch mobil) entgegen
+export function parseWikiInput(str) {
+  const s = String(str || '').trim();
+  const m = s.match(/^https?:\/\/([a-z-]+)\.(?:m\.)?wikipedia\.org\/wiki\/([^?#]+)/i);
+  if (m) { let t = m[2]; try { t = decodeURIComponent(t); } catch (e) {} return { lang: m[1].toLowerCase(), title: normTitle(t) }; }
+  return { lang: null, title: normTitle(s) };
+}
 
 export function normTitle(t) {
   let s = String(t || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
@@ -243,5 +266,14 @@ export async function verifyHop(lang, from, via) {
     const p = d.query && d.query.pages && d.query.pages[0];
     if (!p || p.missing) return null;
     return !!(p.links && p.links.length);
+  } catch (e) { return null; }
+}
+
+// Titel desselben Artikels in einer anderen Sprache (für das Power-up „Übersetzt“)
+export async function langlinkTitle(lang, title, toLang) {
+  try {
+    const d = await getJSON(`${api(lang)}?${qs({ action: 'query', titles: normTitle(title), prop: 'langlinks', lllang: toLang, redirects: 1 })}`, 1);
+    const p = d.query && d.query.pages && d.query.pages[0];
+    return p && p.langlinks && p.langlinks[0] ? p.langlinks[0].title : null;
   } catch (e) { return null; }
 }

@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wikirennen – das Wikipedia-Wettrennen</title>
+  <meta name="description" content="Wikirennen: Klick dich nur über Links vom Start- zum Zielartikel. Mehrspieler mit Code, Tageschallenge, Stufen, Einzelrennen – kostenlos im Browser.">
+  <meta name="theme-color" content="#eaecf0">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://de.wikipedia.org">
+  <link rel="preconnect" href="https://upload.wikimedia.org">
+  <link rel="preload" href="fonts/libertinus-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="game.css">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <!-- ======================= Kopfzeile ======================= -->
+  <header class="vh" id="vh">
+    <button id="menuBtn" class="vh-burger" aria-label="Hauptmenü" aria-expanded="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M1 3h18v2H1zm0 6h18v2H1zm0 6h18v2H1z"/></svg></button>
+    <a class="vh-logo" href="./" id="homeLink" title="Hauptseite"><img src="logo.svg" alt="" width="50" height="50"><span class="vh-wm"><b>Wikirennen</b><small>Das freie Wettrennen</small></span></a>
+    <form class="vh-search" id="hdrJoin" autocomplete="off">
+      <div class="cdx-input-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M12.2 13.6a7 7 0 1 1 1.4-1.4l5.4 5.4-1.4 1.4zM3 8a5 5 0 1 0 10 0A5 5 0 0 0 3 8"/></svg>
+        <input id="hdrCode" type="text" maxlength="4" placeholder="Lobby-Code eingeben" aria-label="Lobby-Code" autocapitalize="characters" spellcheck="false"></div>
+      <button class="cdx-btn" type="submit">Beitreten</button>
+    </form>
+    <nav class="vh-user">
+      <a class="vh-link" href="../../">Zockbox</a>
+      <button id="searchToggle" class="vh-iconbtn vh-searchtoggle" aria-label="Lobby-Code eingeben"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M12.2 13.6a7 7 0 1 1 1.4-1.4l5.4 5.4-1.4 1.4zM3 8a5 5 0 1 0 10 0A5 5 0 0 0 3 8"/></svg></button>
+      <button id="userBtn" class="vh-userbtn" title="Dein Profil"><span id="userAv" class="av"></span><span id="userName">Profil</span></button>
+    </nav>
+  </header>
+  <div id="mainMenu" class="vh-menu hidden">
+    <div class="menu-h">Hauptmenü <button class="linkbtn" id="menuClose">verbergen</button></div>
+    <ul>
+      <li><a data-go="start">Hauptseite</a></li>
+      <li><a data-go="daily">Tageschallenge</a></li>
+      <li><a data-go="levels">Stufen</a></li>
+      <li><a data-go="solo">Einzelrennen</a></li>
+      <li><a data-go="random">Zufallsrennen</a></li>
+      <li><a data-go="rules">Spielregeln</a></li>
+    </ul>
+    <div class="menu-h">Mitmachen</div>
+    <ul>
+      <li><a data-go="private">Private Lobby erstellen</a></li>
+      <li><a data-go="quick">Schnelles Spiel</a></li>
+      <li><a data-go="duel">1-gegen-1-Duell</a></li>
+      <li><a href="../../">Zurück zur Zockbox</a></li>
+    </ul>
+  </div>
+
+  <div class="vp" id="vp">
+    <nav class="vtoc" id="toc" aria-label="Inhalt">
+      <div class="vtoc-h">Inhalt <button id="tocHide" type="button">verbergen</button></div>
+      <ul id="tocList"></ul>
+    </nav>
+    <main class="vmain" id="main">
+
+<!-- ======================= HAUPTSEITE ======================= -->
+<section id="scr-start" class="screen" data-title="Wikirennen">
+  <div class="vtitlebar"><h1 id="top-start">Wikirennen</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> Deutsch</span></div>
+  <div class="vtabs"><div><a class="sel" data-go="start">Hauptseite</a><a data-go="rules">Spielregeln</a></div><div><a data-go="daily">Tageschallenge</a><a data-go="levels">Stufen</a><a data-go="solo">Einzelrennen</a></div></div>
+  <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+  <div class="vbody">
+    <div class="mp-welcome">
+      <div class="w1">Willkommen bei Wikirennen,</div>
+      <div class="w2">dem Wettrennen durch Wikipedia: Vom Startartikel zum Zielartikel – <b>nur über Links</b>.</div>
+      <div class="w3">Mehrspieler bis 30 · Tageschallenge · <span id="lvCountTxt">40</span> Stufen · Einzelrennen · Mehrere Ziele · Power-ups</div>
+    </div>
+    <div class="mp-grid">
+      <div class="mp-col">
+        <div class="mp-box" id="sec-profile">
+          <h2 id="h-profile">Dein Profil</h2>
+          <div class="profile-row">
+            <button id="avatarBtn" class="avatar-btn" title="Avatar wählen" aria-expanded="false"></button>
+            <input id="nameInput" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" aria-label="Dein Name">
+          </div>
+          <div id="avatarGrid" class="avatar-grid hidden"></div>
+          <p class="small muted" style="margin:6px 0 0">Tipp auf den Avatar zum Wechseln. <button class="linkbtn" id="uploadBtn" type="button">Eigenes Bild hochladen</button><span id="clearImgWrap" class="hidden"> · <button class="linkbtn" id="clearImgBtn" type="button">Bild entfernen</button></span><input id="uploadInput" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" class="hidden"></p>
+        </div>
+        <div class="mp-box" id="sec-multi">
+          <h2 id="h-multi">Mehrspieler</h2>
+          <p style="margin-top:0">Lobby erstellen, 4-Buchstaben-Code an Freunde schicken, losrennen. Bis zu 30 Spieler.</p>
+          <div class="mp-actions">
+            <button id="privateBtn" class="cdx-btn primary big">Private Lobby erstellen</button>
+            <button id="quickBtn" class="cdx-btn big">⚡ Schnelles Spiel</button>
+            <button id="duelBtn" class="cdx-btn big">⚔ 1-gegen-1-Duell</button>
+          </div>
+          <form class="join-row" id="joinForm" autocomplete="off">
+            <input id="codeInput" type="text" maxlength="4" placeholder="Code, z. B. KRWQ" aria-label="Lobby-Code" autocapitalize="characters" spellcheck="false">
+            <button id="joinBtn" class="cdx-btn progressive" type="submit">Beitreten</button>
+          </form>
+        </div>
+        <div class="mp-box violet" id="sec-open">
+          <h2 id="h-open">Offene Lobbys <span class="editlink">[<button class="linkbtn" id="browseBtn" type="button">aktualisieren</button>]</span></h2>
+          <ul id="browseList" class="browse-list"><li class="muted">Noch nicht gesucht.</li></ul>
+        </div>
+      </div>
+      <div class="mp-col">
+        <div class="mp-box green" id="sec-daily">
+          <h2 id="h-daily">Tageschallenge</h2>
+          <div class="small muted" id="dailyDate"></div>
+          <div class="mp-route" id="dailyRoute">…</div>
+          <p id="dailyStat" class="small" style="margin:0 0 8px"></p>
+          <div class="btnrow"><button id="dailyBtn" class="cdx-btn primary">Heute spielen</button><button class="cdx-btn" data-go="daily">Archiv</button></div>
+        </div>
+        <div class="mp-box amber" id="sec-solo">
+          <h2 id="h-solo">Einzelrennen</h2>
+          <p style="margin-top:0">Allein üben: zufällige Route würfeln oder Start und Ziel selbst wählen – mit eigenen Regeln. Danach kannst du deine Route samt Ergebnis als Herausforderung verschicken.</p>
+          <div class="btnrow"><button id="randomBtn" class="cdx-btn primary">🎲 Zufallsrennen</button><button id="soloBtn" class="cdx-btn">Route selbst wählen</button></div>
+        </div>
+        <div class="mp-box" id="sec-levels">
+          <h2 id="h-levels">Stufen</h2>
+          <p style="margin-top:0">Routen mit geprüftem kürzesten Weg („Par“). Schaffst du sie in Par-Klicks, gibt's drei Sterne – und die nächste Stufe wird frei.</p>
+          <p id="levelsStat" class="small"></p>
+          <div class="btnrow"><button class="cdx-btn primary" data-go="levels">Stufen öffnen</button></div>
+        </div>
+      </div>
+      <div class="mp-box full" id="sec-rules">
+        <h2 id="h-rules">Spielregeln</h2>
+        <ol>
+          <li>Alle bekommen einen <b>Startartikel</b> und einen (oder mehrere) <b>Zielartikel</b>.</li>
+          <li>Klick dich nur über <a>blaue Links</a> im Artikeltext weiter – auch in Infoboxen, Tabellen und Bildunterschriften. Keine Suche, keine Adresszeile.</li>
+          <li>Jeder neue Artikel ist <b>ein Klick</b>. Sprünge innerhalb der Seite zählen nicht. Weiterleitungen zählen als der Zielartikel.</li>
+          <li>Der Zurück-Knopf im Spiel (falls erlaubt) kostet ebenfalls einen Klick. Strg+F ist normalerweise verboten.</li>
+          <li>Je nach Wertung gewinnt die <b>schnellste Zeit</b> oder die <b>wenigsten Klicks</b>. Bei mehreren Zielen gibt es 10 Punkte pro gefundenem Ziel und 5 Bonuspunkte für den Ersten.</li>
+          <li>Der Host prüft jeden Sprung im Hintergrund bei Wikipedia. Wer schummelt, wird disqualifiziert.</li>
+        </ol>
+        <h3>Spielmodi</h3>
+        <ul>
+          <li><b>Mehrspieler:</b> private Lobby mit Code oder Link, schnelles Spiel in öffentlichen Lobbys, 1-gegen-1-Duell (wenigste Klicks, Neustart erlaubt).</li>
+          <li><b>Tageschallenge:</b> jeden Tag eine Route für alle (wechselt um 0 Uhr UTC), mit Bestwert, Serie und Archiv.</li>
+          <li><b>Stufen:</b> <span class="lvCount">40</span> Routen mit Par und Sternen.</li>
+          <li><b>Einzelrennen:</b> eigene oder zufällige Route, als Herausforderungs-Link teilbar.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= TAGESCHALLENGE ======================= -->
+<section id="scr-daily" class="screen hidden" data-title="Tageschallenge">
+  <div class="vtitlebar"><h1 id="top-daily">Tageschallenge</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> <span id="dailyLangName">Deutsch</span></span></div>
+  <div class="vtabs"><div><a data-go="start">Hauptseite</a><a class="sel">Tageschallenge</a></div><div><a data-go="levels">Stufen</a><a data-go="solo">Einzelrennen</a></div></div>
+  <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+  <div class="vbody">
+    <table class="infobox" id="dailyInfo"></table>
+    <p>Jeden Tag gibt es eine neue Route – für alle gleich. Sie wird aus dem Datum berechnet und wechselt um <b>0 Uhr UTC</b> (1 Uhr in Deutschland, im Sommer 2 Uhr). Gewertet wird nach <b>wenigsten Klicks</b>, bei Gleichstand zählt die Zeit. Dein Bestwert und deine Serie werden nur auf diesem Gerät gespeichert.</p>
+    <p class="fld" style="max-width:280px"><label class="fld">Sprache der Challenge <select id="dailyLang"><option value="de">Deutsch</option><option value="en">English</option></select></label></p>
+    <h2 id="h-today">Heute</h2>
+    <div class="mp-route" id="dailyRoute2"></div>
+    <p id="dailyStat2"></p>
+    <div class="btnrow"><button id="dailyBtn2" class="cdx-btn primary big">Tageschallenge starten</button><button id="dailyShareBtn" class="cdx-btn hidden">Ergebnis teilen</button></div>
+    <h2 id="h-archive">Archiv</h2>
+    <p class="small muted">Verpasste Tage kannst du nachspielen. Für die Serie zählt nur der jeweilige Tag selbst.</p>
+    <div class="table-scroll"><table class="wikitable" id="archiveTable"></table></div>
+  </div>
+</section>
+
+<!-- ======================= STUFEN ======================= -->
+<section id="scr-levels" class="screen hidden" data-title="Stufen">
+  <div class="vtitlebar"><h1 id="top-levels">Stufen</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> Deutsch</span></div>
+  <div class="vtabs"><div><a data-go="start">Hauptseite</a><a class="sel">Stufen</a></div><div><a data-go="daily">Tageschallenge</a><a data-go="solo">Einzelrennen</a></div></div>
+  <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+  <div class="vbody">
+    <p>Jede Stufe hat einen <b>Par</b>: die Länge des kürzesten Wegs, den wir bei Wikipedia nachgerechnet haben. <span class="stars">★★★</span> = in Par-Klicks geschafft, <span class="stars">★★<span class="off">★</span></span> = höchstens 2 Klicks mehr, <span class="stars">★<span class="off">★★</span></span> = angekommen. Wer eine Stufe schafft, schaltet die nächste frei. Zurück ist erlaubt (kostet einen Klick), Strg+F nicht.</p>
+    <p class="hatnote">Wikipedia ändert sich ständig – manchmal gibt es heute einen noch kürzeren Weg. Dann zählt er natürlich auch als drei Sterne.</p>
+    <p id="levelsStat2"></p>
+    <h2 id="h-levellist">Alle Stufen</h2>
+    <div class="table-scroll"><table class="wikitable" id="levelTable"></table></div>
+  </div>
+</section>
+
+<!-- ======================= LOBBY / EINSTELLUNGEN ======================= -->
+<section id="scr-lobby" class="screen hidden" data-title="Lobby">
+  <div class="vtitlebar"><h1 id="lobbyTitle">Lobby</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> <span id="lobbyLangName">Deutsch</span></span></div>
+  <div class="vtabs"><div><a class="sel" id="tabLobby">Lobby</a><a href="#h-chat" id="tabTalk" class="multi-only">Diskussion</a></div><div><button id="copyLinkBtn" class="multi-only" type="button">Einladen</button><button id="shareRouteBtn" class="solo-only" type="button">Route teilen</button><button id="leaveBtn" type="button">Verlassen</button></div></div>
+  <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+  <div class="vbody">
+    <table class="infobox" id="lobbyInfo">
+      <caption id="ibCaption">Lobby</caption>
+      <tbody>
+        <tr class="multi-only"><td colspan="2" class="ib-code" id="lobbyCode">----</td></tr>
+        <tr class="multi-only"><td colspan="2" class="ib-center small muted" id="lobbyCodeHint">Lobby-Code</td></tr>
+        <tr><td colspan="2" class="ib-head">Daten</td></tr>
+      </tbody>
+      <tbody id="ibRows"></tbody>
+      <tbody class="multi-only"><tr><td colspan="2"><div class="ib-btns"><button id="copyLinkBtn2" class="cdx-btn progressive" type="button">🔗 Link kopieren</button><button id="leaveBtn2" class="cdx-btn" type="button">Verlassen</button></div></td></tr></tbody>
+    </table>
+    <p id="lobbyLead"></p>
+    <div id="challengeMsg" class="cdx-msg warning hidden"><span class="ico">!</span><div id="challengeTxt"></div></div>
+
+    <div class="multi-only">
+      <h2 id="h-players">Spieler <span class="muted small" id="playerCount"></span></h2>
+      <ul id="playerList" class="player-list"></ul>
+    </div>
+
+    <h2 id="h-route">Route</h2>
+    <div id="routeSlotLobby">
+      <div id="routeBox" class="route-box">
+        <div class="fields">
+          <label class="fld">Sprache
+            <select id="setLang"><option value="de">Deutsch</option><option value="en">English</option></select>
+          </label>
+          <label class="fld">Route
+            <select id="setRoute">
+              <option value="mixed">Zufall → bekanntes Ziel</option>
+              <option value="popular">Bekannte Themen</option>
+              <option value="random">Komplett zufällig</option>
+              <option value="trending">Meistgelesen (letzter Monat)</option>
+              <option value="daily">Tageschallenge von heute</option>
+              <option value="suggest">Ziel aus Vorschlägen</option>
+              <option value="custom">Selbst wählen</option>
+            </select>
+          </label>
+          <label class="fld">Anzahl Ziele
+            <select id="setTargets"><option value="1">1 Ziel (klassisch)</option><option value="2">2 Ziele</option><option value="3">3 Ziele</option><option value="5">5 Ziele</option></select>
+            <span class="help">Mehrere Ziele: beliebige Reihenfolge, 10 Punkte pro Ziel, +5 für den Ersten.</span>
+          </label>
+        </div>
+        <div id="customBox" class="hidden" style="max-width:760px">
+          <label class="fld">Start
+            <div class="ac"><input id="customStart" type="text" placeholder="Titel oder Wikipedia-Link, z. B. Pizza" autocomplete="off"><button type="button" class="cdx-btn dice" data-dice="start" title="Zufälliger Artikel">🎲</button><div class="ac-list hidden"></div></div>
+          </label>
+          <div id="customTargets" class="custom-targets"></div>
+        </div>
+        <p id="customHidden" class="hatnote hidden">Der Host wählt Start und Ziel selbst – verraten wird beim Start.</p>
+      </div>
+    </div>
+
+    <div id="suggestSec" class="hidden">
+      <h2 id="h-suggest">Zielvorschläge</h2>
+      <p class="small muted" id="suggestHint">Alle können Ziele vorschlagen. Der Host übernimmt sie mit einem Klick, oder stellt die Route auf „Ziel aus Vorschlägen“.</p>
+      <div class="inline-field ac" id="suggestForm" style="max-width:520px">
+        <input id="suggestInput" type="text" placeholder="Zielartikel vorschlagen…" autocomplete="off"><button id="suggestBtn" class="cdx-btn progressive" type="button">Vorschlagen</button><div class="ac-list hidden"></div>
+      </div>
+      <ul id="suggestList" class="sugg-list"></ul>
+    </div>
+
+    <h2 id="h-settings">Einstellungen</h2>
+    <div class="fields three">
+      <label class="fld">Runden
+        <select id="setRounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select>
+      </label>
+      <label class="fld">Zeitlimit
+        <select id="setTime"><option value="1">1 Min</option><option value="2">2 Min</option><option value="3">3 Min</option><option value="5" selected>5 Min</option><option value="7">7 Min</option><option value="10">10 Min</option><option value="0">ohne (max. 15 Min)</option></select>
+      </label>
+      <label class="fld">Wertung
+        <select id="setScoring"><option value="time">Schnellste Zeit</option><option value="clicks">Wenigste Klicks</option></select>
+      </label>
+      <label class="fld multi-only">Rundenende
+        <select id="setEnd"><option value="grace">60 s nach dem Ersten</option><option value="all">Wenn alle fertig</option><option value="first">Sofort beim Ersten</option></select>
+      </label>
+      <label class="fld multi-only">Max. Spieler
+        <select id="setMax"><option>2</option><option>4</option><option>6</option><option>8</option><option selected>10</option><option>15</option><option>20</option><option>30</option></select>
+      </label>
+    </div>
+
+    <h2 id="h-rules2">Regeln</h2>
+    <div class="fields three">
+      <label class="fld">Zurück-Knopf
+        <select id="setBack"><option value="1">erlaubt (1 Klick)</option><option value="0">verboten</option></select>
+      </label>
+      <label class="fld">Strg+F / Suchen
+        <select id="setFind"><option value="0">verboten</option><option value="1">erlaubt</option></select>
+      </label>
+      <label class="fld">Klick-Limit
+        <select id="setLimit"><option value="0">keins</option><option value="3">3 Klicks</option><option value="5">5 Klicks</option><option value="7">7 Klicks</option><option value="10">10 Klicks</option><option value="15">15 Klicks</option></select>
+      </label>
+      <label class="fld">Verbotene Artikel
+        <select id="setBan"><option value="0">keine</option><option value="1">Keine USA</option><option value="2">Keine USA &amp; DE</option><option value="3">Keine Länderartikel</option></select>
+      </label>
+      <label class="fld">Ziel melden
+        <select id="setConfirm"><option value="0">automatisch</option><option value="1">per „Gefunden!“</option></select>
+      </label>
+      <label class="fld">Neustart
+        <select id="setRestart"><option value="0">aus</option><option value="1">erlaubt</option></select>
+        <span class="help">zurück zum Start, Klicks auf 0</span>
+      </label>
+      <label class="fld multi-only">Power-ups
+        <select id="setPower"><option value="0">aus</option><option value="1">an</option></select>
+      </label>
+      <label class="fld multi-only">Zielvorschläge
+        <select id="setSuggest"><option value="1">alle</option><option value="0">nur der Host</option></select>
+      </label>
+    </div>
+
+    <div class="start-row">
+      <button id="startBtn" class="cdx-btn primary big">Rennen starten</button>
+      <span id="waitHost" class="muted hidden"><span class="spinner" style="width:18px;height:18px;border-width:2px"></span> Warte, bis der Host startet…</span>
+    </div>
+
+    <div class="multi-only">
+      <h2 id="h-chat">Diskussion</h2>
+      <div class="talk"><div class="chat-log"></div><form class="chat-form"><input type="text" maxlength="120" placeholder="Nachricht schreiben…" autocomplete="off" aria-label="Nachricht"><button class="cdx-btn progressive">Senden</button></form></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= COUNTDOWN ======================= -->
+<section id="scr-countdown" class="screen hidden" data-title="Countdown">
+  <div id="prepBox">
+    <div class="vtitlebar"><h1>Route wird gesucht …</h1></div>
+    <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+    <div class="vbody"><p><span class="spinner"></span>&nbsp; Der Host sucht Start und Ziel auf Wikipedia.</p></div>
+  </div>
+  <div id="cdBox" class="hidden">
+    <div class="vtitlebar"><h1 id="cdRound">Runde 1 von 3</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> <span id="cdLang">Deutsch</span></span></div>
+    <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+    <div class="vbody">
+      <div class="cdx-msg"><span class="ico">i</span><div class="cd-banner"><span class="cd-num" id="cdNum">5</span><div>Das Rennen beginnt gleich. Lies dir das Ziel gut durch – du kannst es während des Rennens jederzeit oben antippen.</div></div></div>
+      <h2 id="h-cdroute">Route</h2>
+      <div class="preview-grid" id="cdCards"></div>
+      <h2 id="h-cdrules">Regeln dieser Runde</h2>
+      <ul id="cdRules"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RENNEN ======================= -->
+<section id="scr-race" class="screen hidden" data-title="Rennen">
+  <div id="hud" class="hud">
+    <div class="hud-row">
+      <img class="hud-logo" src="logo.svg" alt="">
+      <button id="targetChip" class="target-chip" title="Ziel ansehen"><span class="lbl" id="targetLbl">Ziel</span><span class="tn" id="targetName">…</span></button>
+      <div class="hud-stats">
+        <div class="stat"><span class="k">Runde</span><span class="v" id="raceRound">1/3</span></div>
+        <div class="stat"><span class="k">Zeit</span><span class="v" id="raceTimer">5:00</span></div>
+        <div class="stat"><span class="k">Klicks</span><span class="v"><span id="raceClicks">0</span><span id="raceLimit"></span></span></div>
+      </div>
+      <div class="hud-btns">
+        <button id="foundBtn" class="cdx-btn success hidden" title="Ich hab's gefunden!">✓<span class="hide-xs"> Gefunden!</span></button>
+        <button id="backBtn" class="cdx-btn" title="Zurück (kostet 1 Klick)">←<span class="hide-xs"> Zurück</span></button>
+        <button id="restartBtn" class="cdx-btn hidden" title="Neustart: zurück zum Start, Klicks auf 0">↺<span class="hide-xs"> Neustart</span></button>
+        <button id="powerBtn" class="cdx-btn hidden" title="Power-ups">⚡<span id="powerCount"></span></button>
+        <button id="playersBtn" class="cdx-btn" title="Mitspieler &amp; Chat">👥 <span id="liveCount">0</span></button>
+        <button id="giveupBtn" class="cdx-btn destructive" title="Aufgeben">⚑<span class="hide-xs"> Aufgeben</span></button>
+      </div>
+    </div>
+    <div id="pathBar" class="crumbs"></div>
+    <div id="powerMenu" class="power-menu hidden"></div>
+  </div>
+  <div id="doneBanner" class="cdx-msg success hidden"></div>
+  <div class="race-grid">
+    <div id="wikiHost" class="wiki-host"></div>
+    <div id="panelBackdrop" class="panel-backdrop"></div>
+    <aside id="sidePanel" class="tools" aria-label="Mitspieler">
+      <div class="tools-h"><span id="panelTitle">Mitspieler</span><button id="panelClose" class="linkbtn panel-close" type="button">schließen</button></div>
+      <ul id="liveList" class="live-list"></ul>
+      <div id="specBox" class="hidden">
+        <div class="tools-sub">Weg von <span id="specName"></span></div>
+        <ol id="specPath" class="spec-path"></ol>
+      </div>
+      <div class="tools-sub">Regeln</div>
+      <ul id="ruleLine" class="rules-list"></ul>
+      <div class="multi-only">
+        <div class="tools-sub">Diskussion</div>
+        <div class="talk"><div class="chat-log"></div><form class="chat-form"><input type="text" maxlength="120" placeholder="Nachricht…" autocomplete="off" aria-label="Nachricht"><button class="cdx-btn progressive">➤</button></form></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ======================= ERGEBNIS ======================= -->
+<section id="scr-results" class="screen hidden" data-title="Ergebnis">
+  <div class="vtitlebar"><h1 id="resultsTitle">Ergebnis</h1><span class="vlang"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M20 18h-1.4l-1-3h-4.2l-1 3H11l3.8-10h1.4zm-6.2-4.3h3.3L15.4 9zM8 4V2H6v2H1v2h8.3A10 10 0 0 1 6.9 10 9 9 0 0 1 5.5 8H3.4a11 11 0 0 0 2 3.3L2 14.6l1.4 1.4 3.4-3.4 2 2 .8-1.9-1.4-1.4A12 12 0 0 0 11.3 6H13V4z"/></svg> <span id="resLang">Deutsch</span></span></div>
+  <div class="vtabs"><div><a class="sel" href="#h-place">Ergebnis</a><a href="#h-compare">Wegvergleich</a><a href="#h-chat2" class="multi-only">Diskussion</a></div><div><button id="homeBtn2" type="button">Hauptseite</button></div></div>
+  <div class="vtagline">Aus Wikirennen, dem freien Wikipedia-Wettrennen</div>
+  <div class="vbody">
+    <p id="resultsRoute"></p>
+    <div id="resultMsg" class="cdx-msg success hidden"><span class="ico">✓</span><div id="resultMsgTxt"></div></div>
+    <div id="podium" class="podium hidden"></div>
+    <h2 id="h-place">Platzierung</h2>
+    <div class="table-scroll"><table class="wikitable" id="roundTable"></table></div>
+    <h2 id="h-compare">Wegvergleich</h2>
+    <div class="table-scroll"><table class="wikitable cmp" id="compareTable"></table></div>
+    <div id="scoreSec" class="multi-only">
+      <h2 id="h-total">Gesamtwertung</h2>
+      <div class="table-scroll"><table class="wikitable" id="scoreTable"></table></div>
+    </div>
+    <div id="historySec" class="hidden">
+      <h2 id="h-history">Rundenübersicht</h2>
+      <div class="table-scroll"><table class="wikitable" id="historyTable"></table></div>
+    </div>
+    <div id="shareSec" class="hidden share-box">
+      <h2 id="h-share">Teilen</h2>
+      <p id="shareLead">Schick die Route an Freunde – sie sehen dein Ergebnis und können es schlagen.</p>
+      <textarea id="shareText" readonly></textarea>
+      <div class="btnrow"><button id="shareBtn" class="cdx-btn primary" type="button">Teilen / Link kopieren</button></div>
+    </div>
+    <div id="nextBox" class="hidden">
+      <h2 id="h-next">Nächste Runde</h2>
+      <div id="routeSlotResults"></div>
+      <button id="nextBtn" class="cdx-btn primary big">Nächste Runde starten</button>
+    </div>
+    <p id="nextNote" class="muted"></p>
+    <div class="btnrow" id="endBtns">
+      <button id="againBtn" class="cdx-btn primary big hidden">Nochmal rennen</button>
+      <button id="soloAgainBtn" class="cdx-btn primary big hidden">Neue Zufallsroute</button>
+      <button id="nextLevelBtn" class="cdx-btn primary big hidden">Nächste Stufe</button>
+      <button id="retryBtn" class="cdx-btn big hidden">Nochmal versuchen</button>
+      <button id="homeBtn" class="cdx-btn big">Zur Hauptseite</button>
+    </div>
+    <div class="multi-only">
+      <h2 id="h-chat2">Diskussion</h2>
+      <div class="talk"><div class="chat-log"></div><form class="chat-form"><input type="text" maxlength="120" placeholder="Nachricht schreiben…" autocomplete="off" aria-label="Nachricht"><button class="cdx-btn progressive">Senden</button></form></div>
+    </div>
+  </div>
+</section>
+
+    </main>
+  </div>
+
+  <footer class="vfoot">
+    <div class="vfoot-in">
+      <div>
+        <p class="sig">made by Oskar</p>
+        <p>Wikirennen ist ein Spiel in der <a href="../../">Zockbox</a>. Die Artikel werden live von Wikipedia geladen; Texte stehen unter der Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.de" target="_blank" rel="noopener">CC BY-SA 4.0</a>, Bilder laut Dateibeschreibung. Wikirennen ist nicht mit der Wikimedia Foundation verbunden.</p>
+        <ul><li><a data-go="start">Hauptseite</a></li><li><a data-go="daily">Tageschallenge</a></li><li><a data-go="levels">Stufen</a></li><li><a data-go="rules">Spielregeln</a></li><li><a href="../../">Zockbox</a></li></ul>
+      </div>
+      <div class="vfoot-mark"><img src="logo.svg" alt=""><span class="vh-wm"><b>Wikirennen</b></span></div>
+    </div>
+  </footer>
+
+  <!-- Ziel-Vorschau -->
+  <div id="targetModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Ziel">
+    <div class="modal-card">
+      <button class="cdx-btn quiet modal-x" data-close aria-label="Schließen">✕</button>
+      <div id="modalCards"></div>
+      <ul id="modalRules"></ul>
+      <div class="modal-foot"><span class="small muted">Vorschau aus Wikipedia</span><button class="cdx-btn primary" data-close>Weiterrennen</button></div>
+    </div>
+  </div>
+  <div id="fxInk" class="fx-ink hidden"></div>
+  <div id="fxBadge" class="fx-badge hidden"></div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

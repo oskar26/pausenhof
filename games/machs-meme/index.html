@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mach's Meme – Zockbox</title>
+  <meta name="description" content="Mach's Meme: das Meme-Partyspiel im Browser. Beschrifte Memes, bewerte die deiner Freunde und hol dir den Sieg. Gratis, ohne Anmeldung.">
+  <meta name="theme-color" content="#2f2b66">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='80' font-size='80' text-anchor='middle'>😂</text></svg>">
+  <link rel="preload" href="fonts/BarlowCondensed-700-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="game.css">
+  <script src="../../shared/vendor/peerjs.min.js"></script>
+</head>
+<body class="on-start">
+  <div class="bg" aria-hidden="true"><div class="rays"></div></div>
+
+  <!-- KOPFZEILE -->
+  <header class="hdr" id="hdr">
+    <div class="hdr-left">
+      <a class="logo" id="logoLink" href="./" aria-label="Mach's Meme">
+        <span class="logo-mark">M<i>'s</i>M</span>
+      </a>
+      <button class="hdr-btn" id="leaveBtn" type="button"><svg viewBox="0 0 24 24" class="ico"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm6.6 4.4L15.2 8.8 17.4 11H9v2h8.4l-2.2 2.2 1.4 1.4L21.2 12l-4.6-4.6z"/></svg><span class="hide-sm">Menü / Verlassen</span></button>
+    </div>
+    <div class="hdr-mid">
+      <div class="hdr-tag hidden" id="hdrTag">🔒 Privat</div>
+      <div class="hdr-small hidden" id="hdrSmall"></div>
+      <div class="hdr-title" id="hdrTitle"></div>
+    </div>
+    <div class="hdr-right">
+      <a class="hdr-btn zb" href="../../" id="zockboxLink"><svg viewBox="0 0 24 24" class="ico"><path d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3L12 3z"/></svg><span>Zockbox</span></a>
+    </div>
+    <div class="hdr-bar hidden" id="hdrBar"><div class="hdr-fill" id="hdrFill"></div><span class="hdr-secs hidden" id="hdrSecs"></span></div>
+  </header>
+
+  <main class="main" id="main">
+
+    <!-- START -->
+    <section id="scr-start" class="screen">
+      <h1 class="title-logo" aria-label="Mach's Meme"><span class="t1">Mach's</span><span class="t2">Meme</span></h1>
+      <div class="start-cards">
+        <div class="card-profile">
+          <div class="cp-inner">
+            <button class="avatar-xl" id="avatarBtn" type="button" aria-label="Avatar ändern"><span id="avatarEmoji">🐸</span><span class="pencil">✎</span></button>
+            <div class="name-field">
+              <input id="nameInput" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" spellcheck="false">
+              <button class="dice" id="diceBtn" type="button" title="Zufälliger Name" aria-label="Zufälliger Name">🎲</button>
+            </div>
+          </div>
+        </div>
+        <button class="card-play quick" id="quickBtn" type="button">
+          <span class="cp-art" aria-hidden="true"><span class="dots"></span><span class="art-emoji">🏃💨</span></span>
+          <span class="cp-title">Schnelles <br>Spiel</span>
+          <span class="cp-hover">Rein da</span>
+        </button>
+        <button class="card-play private" id="privateBtn" type="button">
+          <span class="cp-art" aria-hidden="true"><span class="tris"></span><span class="art-emoji">😎🐱</span></span>
+          <span class="cp-title">Privates <br>Spiel</span>
+          <span class="cp-hover">Los geht's</span>
+        </button>
+      </div>
+      <button class="link-big" id="browseBtn" type="button"><span class="globe">🌐</span> Öffentliche Lobbys</button>
+      <button class="link-small" id="savedBtn" type="button">⭐ Meine gespeicherten Memes <span id="savedCount"></span></button>
+      <button class="howto-toggle" id="howtoBtn" type="button">Spielanleitung<span class="caret">▾</span></button>
+
+      <div class="howto" id="howto">
+        <h2 class="sec-title">Spielanleitung</h2>
+        <div class="steps">
+          <div class="step"><div class="step-ico">🎧</div><h3>1. Hol deine Leute</h3><p>Startet einen Sprachchat (z.&nbsp;B. Discord) oder sitzt zusammen und erstellt eine Lobby.</p></div>
+          <div class="step"><div class="step-ico">✍️</div><h3>2. Bau dein Meme</h3><p>Jeder bekommt eine zufällige Vorlage und muss sich vor Ablauf der Zeit eine witzige Beschriftung ausdenken.</p></div>
+          <div class="step"><div class="step-ico">👍</div><h3>3. Bewerte die Memes</h3><p>Die Memes kommen eins nach dem anderen. Pro Meme habt ihr ein paar Sekunden: Daumen hoch, „Meh“ oder runter.</p></div>
+          <div class="step buddy"><div class="step-ico">💞</div><h3>Meme Buddy</h3><p>Einmal pro Runde darfst du ein fremdes Meme zu deinem Buddy machen. Dafür kriegst du die Hälfte seiner Punkte dazu – auch wenn sie negativ sind!</p></div>
+          <div class="step"><div class="step-ico">📊</div><h3>4. Schau, was passiert ist</h3><p>Nach jeder Runde siehst du alle Memes noch mal und wer gerade vorne liegt.</p></div>
+          <div class="step"><div class="step-ico">📲</div><h3>5. Teile die Memes</h3><p>Mit „Herunterladen“ speicherst du jedes Meme als Bild (oder als animiertes GIF). Ab damit in den Gruppenchat!</p></div>
+        </div>
+        <h2 class="sec-title">Hä? Fragen &amp; Antworten</h2>
+        <div class="faq">
+          <details><summary>Was ist Mach's Meme?</summary><p>Ein Partyspiel für mehrere Leute: Jede Runde bekommt ihr Meme-Vorlagen, denkt euch die lustigste Beschriftung aus und bewertet danach gegenseitig eure Memes. Die besten Memes bringen die meisten Punkte.</p></details>
+          <details><summary>Brauche ich ein Konto?</summary><p>Nein. Name eintippen, Avatar aussuchen, fertig. Es gibt keine Anmeldung und keinen Server, der mitliest – die Daten laufen direkt zwischen euren Geräten.</p></details>
+          <details><summary>Welche Spielmodi gibt es?</summary><p><b>Normal:</b> jeder bekommt ein zufälliges Meme. <b>Themen:</b> jede Runde gibt ein Thema vor. <b>Gleiches Meme:</b> alle bekommen dieselbe Vorlage – wer findet die beste Beschriftung? <b>Entspannt:</b> keine Punkte, kein Stress.</p></details>
+          <details><summary>Wie funktionieren die Punkte?</summary><p>Wenn alle anderen dein Meme hochvoten, bekommst du 1000 Punkte. Jeder Downvote zieht anteilig ab – du kannst also auch ins Minus rutschen. „Meh“ ändert nichts. Pro Meme Buddy, den dein Meme bekommt, gibt es +10. Wer in einer Runde gar kein Meme abgibt, bekommt −500.</p></details>
+          <details><summary>Wie viele Leute können mitspielen?</summary><p>Mindestens 2, in privaten Lobbys bis zu 30. Die Abstimmungszeit passt sich an die Spielerzahl an.</p></details>
+          <details><summary>Wo gebe ich einen Code ein?</summary><p>Auf „Privates Spiel“ tippen und dort den 4-stelligen Code eingeben – oder einfach den Einladungslink öffnen.</p></details>
+          <details><summary>Läuft das auf dem Handy?</summary><p>Ja, auf iPhone, iPad, Android und am PC – alle spielen in denselben Lobbys.</p></details>
+        </div>
+      </div>
+      <footer class="site-foot"><b>made by Oskar</b><span>Mach's Meme · ein Spiel in der <a href="../../">Zockbox</a> · Vorlagen von imgflip.com &amp; memegen.link · Schriften: Barlow Condensed, Bangers &amp; Nunito (SIL OFL) · GIF-Export mit omggif (MIT)</span></footer>
+    </section>
+
+    <!-- PRIVAT -->
+    <section id="scr-private" class="screen hidden">
+      <div class="private-wrap">
+        <div class="pv-col">
+          <h2 class="pv-title orange">Mit Einladungscode beitreten</h2>
+          <div class="pv-ico">✉️</div>
+          <div class="code-boxes" id="codeBoxes">
+            <input maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" aria-label="Code Buchstabe 1" placeholder="X">
+            <input maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" aria-label="Code Buchstabe 2" placeholder="X">
+            <input maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" aria-label="Code Buchstabe 3" placeholder="X">
+            <input maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" aria-label="Code Buchstabe 4" placeholder="X">
+          </div>
+          <p class="pv-hint">Hast du einen Einladungscode? Oben eingeben.</p>
+        </div>
+        <div class="pv-sep"></div>
+        <div class="pv-col">
+          <h2 class="pv-title green">Private Lobby erstellen</h2>
+          <div class="pv-ico">🃏</div>
+          <button class="btn green" id="createLobbyBtn" type="button">Meine Lobby erstellen</button>
+          <p class="pv-hint">Erstelle eine Lobby und lade deine Freunde ein</p>
+        </div>
+      </div>
+      <button class="link-back" data-go="start" type="button">← Zurück zum Start</button>
+    </section>
+
+    <!-- EINLADUNG -->
+    <section id="scr-invite" class="screen hidden">
+      <div class="invite-wrap">
+        <h2 class="invite-title">Was für ein Tag! Du wurdest zu einer Lobby eingeladen!</h2>
+        <button class="avatar-xl" id="avatarBtn2" type="button" aria-label="Avatar ändern"><span id="avatarEmoji2">🐸</span><span class="pencil">✎</span></button>
+        <div class="name-field">
+          <input id="nameInput2" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" spellcheck="false">
+          <button class="dice" id="diceBtn2" type="button" aria-label="Zufälliger Name">🎲</button>
+        </div>
+        <button class="btn green big" id="inviteJoinBtn" type="button">Lass uns loslegen!</button>
+        <button class="link-back" id="inviteBack" type="button">← Zurück zum Start</button>
+      </div>
+    </section>
+
+    <!-- ÖFFENTLICHE LOBBYS -->
+    <section id="scr-public" class="screen hidden">
+      <div class="panel public-panel">
+        <div class="pp-head"><h2 class="sec-title left">Öffentliche Lobbys</h2><button class="btn small blue" id="refreshBtn" type="button">↻ Aktualisieren</button></div>
+        <div id="browseList" class="browse-list"></div>
+      </div>
+      <button class="link-back" data-go="start" type="button">← Zurück zum Start</button>
+    </section>
+
+    <!-- LOBBY -->
+    <section id="scr-lobby" class="screen hidden">
+      <div class="lobby-steps" id="lobbySteps">
+        <button class="lstep" data-step="pack" type="button"><span class="ls-ico">🖼️</span><span class="ls-txt">Meme Pack</span></button>
+        <span class="ls-arrow">➜</span>
+        <button class="lstep" data-step="mode" type="button"><span class="ls-ico">🎭</span><span class="ls-txt">Spielmodus</span></button>
+        <span class="ls-arrow">➜</span>
+        <button class="lstep" data-step="settings" type="button"><span class="ls-ico">⚙️</span><span class="ls-txt">Einstellungen</span></button>
+        <button class="go-btn" id="startBtn" type="button"><span class="flame">🔥</span><span>Los geht's!</span></button>
+      </div>
+
+      <div class="lobby-body">
+        <!-- Host: Schritt-Inhalte -->
+        <div class="panel lobby-panel" id="stepPack">
+          <div class="lp-head"><h2>Wähle ein Meme Pack</h2><span class="lp-count" id="packCount">1/2 ausgewählt</span></div>
+          <div class="pack-grid" id="packGrid"></div>
+        </div>
+        <div class="panel lobby-panel hidden" id="stepMode">
+          <div class="lp-head"><h2>Wähle einen Spielmodus</h2></div>
+          <div class="mode-grid" id="modeGrid"></div>
+        </div>
+        <div class="panel lobby-panel hidden" id="stepSettings">
+          <div class="lp-head"><h2>Spieleinstellungen</h2></div>
+          <div class="set-rows">
+            <label class="set-row"><span>Beschriftungszeit</span><span class="selw"><select id="setTime"></select></span></label>
+            <label class="set-row"><span>Runden</span><span class="selw"><select id="setRounds"></select></span></label>
+            <label class="set-row"><span>Meme-Wechsel <i class="qm" title="So oft darf jeder pro Runde eine andere Vorlage ziehen.">?</i></span><span class="selw"><select id="setRerolls"></select></span></label>
+          </div>
+          <button class="expert-toggle" id="expertBtn" type="button">Experten-Einstellungen <span class="caret">▾</span></button>
+          <div class="expert hidden" id="expertList"></div>
+        </div>
+        <!-- Mitspieler: Übersicht -->
+        <div class="panel lobby-panel hidden" id="guestView">
+          <div class="guest-sum" id="guestSum"></div>
+          <button class="expert-toggle" id="detailsBtn" type="button">Details <span class="caret">▾</span></button>
+          <div class="guest-details hidden" id="guestDetails"></div>
+          <p class="guest-wait">Der Spielleiter stellt gerade alles ein …</p>
+        </div>
+      </div>
+
+      <div class="lobby-bar">
+        <div class="lb-players" id="playerList"></div>
+        <div class="lb-side">
+          <div class="lb-count"><b id="playerNum">1</b> von <span class="selw small"><select id="setMax"></select></span></div>
+          <p class="lb-msg" id="lobbyMsg"></p>
+          <div class="lb-btns">
+            <button class="pill cyan" id="copyLinkBtn" type="button">Link kopieren 🔗</button>
+            <button class="pill yellow" id="showCodeBtn" type="button">Code anzeigen 👁</button>
+          </div>
+        </div>
+      </div>
+      <div class="votekick hidden" id="votekick"></div>
+    </section>
+
+    <!-- ZWISCHENBILDSCHIRM -->
+    <section id="scr-stage" class="screen hidden">
+      <div class="stage">
+        <div class="blob"><span id="stageEmoji">😼</span></div>
+        <h2 class="stage-title" id="stageTitle">Okaaay, los geht's</h2>
+        <p class="stage-sub" id="stageSub">Mach dich bereit, dein Meme zu erstellen</p>
+        <button class="btn blue hidden" id="stageEditBtn" type="button">✏️ Doch noch bearbeiten</button>
+        <p class="stage-note" id="stageNote"></p>
+      </div>
+    </section>
+
+    <!-- ERSTELLEN -->
+    <section id="scr-create" class="screen hidden">
+      <div class="create-grid">
+        <div class="panel meme-panel">
+          <div class="topic-chip hidden" id="topicChip"></div>
+          <div class="tpl-name" id="tplName"></div>
+          <div class="meme-box"><div id="editorMeme" class="meme editable"></div></div>
+          <div class="meme-actions">
+            <button class="link-act" id="addBoxBtn" type="button">＋ Textfeld</button>
+            <button class="link-act" id="rerollBtn" type="button">⇄ Meme ändern (<span id="rerollCount">5</span>)</button>
+          </div>
+        </div>
+        <div class="panel input-panel">
+          <div class="motivation"><div class="mini-blob">😼</div><p id="motivation">Schreib was Lustiges. Jetzt.</p></div>
+          <div id="boxInputs" class="box-inputs"></div>
+          <div class="grow"></div>
+          <button class="btn green wide" id="submitBtn" type="button">Fertig! 👆</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BEWERTEN -->
+    <section id="scr-vote" class="screen hidden">
+      <div class="vote-wrap">
+        <div class="vote-top"><span class="topic-chip small hidden" id="voteTopic"></span></div>
+        <div class="panel vote-panel"><div id="voteMeme" class="meme"></div></div>
+        <div class="vote-controls" id="voteControls">
+          <button class="buddy-btn" id="buddyBtn" type="button" title="Meme Buddy vergeben"><span class="bface">🥰</span><span class="blabel">Buddy</span></button>
+          <div class="vc-main">
+            <button class="vc up" data-v="1" type="button" aria-label="Upvote"><svg viewBox="0 0 24 24"><path d="M12 4l-7 7h4v9h6v-9h4z"/></svg></button>
+            <button class="vc meh" data-v="0" type="button"><span class="shrug">¯\_(ツ)_/¯</span><span class="meh-l" id="mehLabel">Meh</span></button>
+            <button class="vc down" data-v="-1" type="button" aria-label="Downvote"><svg viewBox="0 0 24 24"><path d="M12 20l7-7h-4V4H9v9H5z"/></svg></button>
+          </div>
+          <div class="vote-acts">
+            <button class="chip-btn light" id="voteDlBtn" type="button">⤓ Herunterladen</button>
+            <button class="chip-btn yellow" id="voteSaveBtn" type="button">⭐ Speichern</button>
+          </div>
+        </div>
+        <p class="vote-note" id="voteNote"></p>
+        <button class="btn yellow hidden host-next" id="voteNextBtn" type="button">Weiter ▸</button>
+      </div>
+    </section>
+
+    <!-- ERGEBNISSE -->
+    <section id="scr-results" class="screen hidden">
+      <div class="results-grid">
+        <div class="res-memes">
+          <div class="no-memes hidden" id="noMemes"><h2>Wie wär's, wenn du nächstes Mal ein paar Memes machst?</h2><p>Na gut, wir versuchen's einfach in der nächsten Runde noch mal …</p></div>
+          <div class="divider-title hidden-lg">Frisch gebackene Memes</div>
+          <div id="resMemes" class="meme-list"></div>
+        </div>
+        <div class="res-board">
+          <div id="scoreList" class="score-list"></div>
+          <button class="btn yellow hidden host-next" id="resNextBtn" type="button">Weiter ▸</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINALE -->
+    <section id="scr-final" class="screen hidden">
+      <div class="confetti" id="confetti" aria-hidden="true"></div>
+      <div class="final-sum panel" id="finalSum"></div>
+      <div class="podium" id="podium"></div>
+      <div class="final-btns">
+        <button class="btn blue" id="againBtn" type="button">Zurück zur Lobby 🎮</button>
+        <p class="final-note" id="finalNote"></p>
+      </div>
+      <button class="divider-title as-btn" id="topflopBtn" type="button">Von Top zu Flop ▾</button>
+      <div id="gallery" class="meme-list gallery"></div>
+    </section>
+  </main>
+
+  <!-- SCHWEBENDE KNÖPFE -->
+  <button class="fab chat-fab" id="chatFab" type="button" aria-label="Chat"><span class="bubble">💬</span><span class="badge hidden" id="chatBadge">0</span></button>
+  <div class="fab-r">
+    <button class="fab-ico" id="soundBtn" type="button" aria-label="Ton an/aus">📣</button>
+    <button class="fab-ico" id="gearBtn" type="button" aria-label="Einstellungen">⚙️</button>
+  </div>
+
+  <!-- CHAT -->
+  <aside class="chat hidden" id="chat">
+    <div class="chat-head"><b>Chat</b><button class="x" id="chatClose" type="button" aria-label="Chat schließen">✕</button></div>
+    <div class="chat-log" id="chatLog"></div>
+    <form class="chat-form" id="chatForm"><input id="chatInput" type="text" maxlength="200" placeholder="Schreib was …" autocomplete="off"><button class="btn small green" type="submit">Senden</button></form>
+  </aside>
+
+  <!-- MODALS -->
+  <div class="modal hidden" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+  <div class="popover hidden" id="gearPop">
+    <h3>Einstellungen</h3>
+    <label class="pop-row">Lautstärke <input type="range" id="volRange" min="0" max="100" step="5"></label>
+    <label class="pop-row"><input type="checkbox" id="muteChk"> Ton aus</label>
+    <p class="pop-foot">made by Oskar</p>
+  </div>
+  <div class="toasts" id="toasts"></div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-// Wiki-Wandertag – bekannte, schulfreundliche Artikel als Ziele/Starts („Bekannte Themen“).
+// Wikirennen – bekannte, schulfreundliche Artikel als Ziele/Starts („Bekannte Themen“).
 // Titel wie auf Wikipedia. Werden beim Start noch einmal über die API aufgelöst.
 export const POPULAR = {
   de: [

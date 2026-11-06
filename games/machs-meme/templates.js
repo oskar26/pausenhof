@@ -1,4 +1,4 @@
-// Meme-Vorlagen für Memelympics.
+// Meme-Vorlagen für Mach's Meme.
 // Klassiker: Imgflip Top 100 (api.imgflip.com/get_memes)
 // Extra + GIFs: memegen.link (Open Source, github.com/jacebrowning/memegen)
 // Felder: id, n = Name, u = Bild-URL, w/h = Größe, b = Anzahl Textfelder, gif = animiert
@@ -14,3 +14,30 @@ export const TEMPLATE_SETS = {
   mixgif: CLASSIC.concat(EXTRA).filter((t) => !GIF_NAMES.has(norm(t.n))).concat(GIFS),
   gifs: GIFS,
 };
+
+// Meme Packs für die Lobby-Auswahl (max. 2 gleichzeitig, wie beim Vorbild)
+export const PACKS = [
+  { id: 'classic', name: '✨ Klassiker ✨', desc: 'Die 100 beliebtesten Vorlagen', list: CLASSIC, cover: CLASSIC[0] },
+  { id: 'extra', name: 'Noch mehr Memes', desc: 'Kult-Memes von memegen.link', list: EXTRA, cover: EXTRA.find((t) => t.id === 'mg-stonks') || EXTRA[0] },
+  { id: 'gifs', name: 'GIF Memes', desc: 'Animierte Vorlagen', list: GIFS, cover: GIFS[0], isNew: true },
+];
+
+// Vorlagen-Pool aus gewählten Packs, ohne Doppelte (gleicher Name = gleiches Meme;
+// eine GIF-Version ersetzt ihre Standbild-Version).
+export function buildPool(packIds) {
+  const ids = (packIds && packIds.length ? packIds : ['classic']).filter((id) => PACKS.some((p) => p.id === id));
+  const lists = ids.map((id) => PACKS.find((p) => p.id === id).list);
+  const hasGif = ids.includes('gifs');
+  const seen = new Set();
+  const out = [];
+  if (hasGif) for (const t of GIFS) { seen.add(norm(t.n)); out.push(t); }
+  for (const list of lists) {
+    for (const t of list) {
+      if (t.gif) continue;
+      const k = norm(t.n);
+      if (seen.has(k)) continue;
+      seen.add(k); out.push(t);
+    }
+  }
+  return out.length ? out : CLASSIC.slice();
+}

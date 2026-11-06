@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>404 – Raum nicht gefunden · Pausenhof</title>
+  <meta name="theme-color" content="#1d3a2e">
+  <meta name="robots" content="noindex">
+  <script>
+    // GitHub Pages zeigt diese Seite für jeden falschen Pfad – egal wie tief.
+    // Damit CSS und Links stimmen, setzen wir die Basis auf den Pausenhof-Ordner.
+    (function () {
+      var p = location.pathname.split('/');
+      var base = location.hostname.endsWith('github.io') && p.length > 2 && p[1] ? '/' + p[1] + '/' : '/';
+      document.write('<base href="' + base + '">');
+    })();
+  </script>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="shared/pausenhof.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./"><span class="logo">P</span><b>Pausenhof</b></a>
+    </header>
+
+    <main class="ph-404">
+      <div class="ph-big" aria-hidden="true">404</div>
+      <div class="note tilt-l">
+        <h2>Raum nicht gefunden!</h2>
+        <p style="font-weight:700;margin:0 0 16px">Diesen Klassenraum gibt es nicht – vielleicht hat sich jemand im Stundenplan vertippt. Zurück auf den Pausenhof?</p>
+        <a class="btn" href="./">🔔 Zum Pausenhof</a>
+      </div>
+      <p class="muted" style="font-weight:700;margin:0">Du wolltest einer Lobby beitreten? Gib den Code auf der Startseite ein.</p>
+    </main>
+
+    <footer class="footer">
+      <div class="sig">made by Oskar</div>
+      <div>Pausenhof</div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pausenhof – Spiele für die große Pause</title>
+  <meta name="description" content="Pausenhof: kostenlose Multiplayer-Spiele im Browser – ohne Anmeldung, ohne Download. Made by Oskar.">
+  <meta name="theme-color" content="#1d3a2e">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pausenhof">
+  <meta property="og:title" content="Pausenhof – Spiele für die große Pause">
+  <meta property="og:description" content="Kostenlose Party-Spiele im Browser. Lobby erstellen, Code teilen, losspielen.">
+  <meta property="og:image" content="assets/icon-512.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="shared/pausenhof.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./"><span class="logo">P</span><b>Pausenhof</b></a>
+      <span class="muted ph-topnote" style="font-weight:800;font-size:14px;text-align:right">kostenlos · ohne Anmeldung</span>
+    </header>
+
+    <div id="installHint" class="note blue ph-install hidden" role="note">
+      <span style="font-size:26px" aria-hidden="true">📲</span>
+      <p>Tipp: Tippe in Safari auf <b>Teilen</b> <span aria-hidden="true">⬆️</span> und dann <b>„Zum Home-Bildschirm“</b> – dann ist Pausenhof wie eine App auf deinem Handy.</p>
+      <button id="installClose" class="ph-x" type="button" aria-label="Hinweis schließen">✕</button>
+    </div>
+
+    <section class="ph-hero">
+      <div class="ph-hero-text">
+        <h1>Gong! <span class="ph-bell" aria-hidden="true">🔔</span><br><span class="chalk-underline">Pause.</span></h1>
+        <p>Party-Spiele für zwischendurch. Lobby erstellen, Code an deine Freunde schicken, losspielen. Läuft auf Handy, iPad und Laptop – bis zu 30 Leute in einer Runde.</p>
+        <div class="ph-hero-ctas">
+          <a class="btn big" href="games/memelympics/">🏅 Memelympics</a>
+          <a class="btn big mint" href="games/wiki-wandertag/">🧭 Wiki-Wandertag</a>
+        </div>
+      </div>
+
+      <div class="ph-side">
+        <section class="note paper tilt-r ph-card" aria-labelledby="cardTitle">
+          <h2 id="cardTitle">🪪 Schülerausweis</h2>
+          <div class="ph-card-row">
+            <button id="phAvatar" class="ph-avatar-btn" type="button" aria-label="Avatar auswählen" aria-expanded="false" aria-controls="phAvatarGrid">🐸</button>
+            <input id="phName" type="text" maxlength="16" placeholder="Dein Name" autocomplete="nickname" enterkeyhint="done" aria-label="Dein Name">
+            <button id="phDice" class="btn small ph-dice" type="button" title="Zufälliger Name und Avatar" aria-label="Zufälliger Name und Avatar">🎲</button>
+          </div>
+          <div id="phAvatarGrid" class="ph-avatar-grid hidden" role="group" aria-label="Avatare"></div>
+          <div class="ph-card-foot">
+            <span>Gilt für alle Spiele. Tipp auf den Avatar zum Ändern.</span>
+            <span id="phSaved" class="ph-saved" aria-live="polite">✓ gespeichert</span>
+          </div>
+        </section>
+
+        <section class="note tilt-l ph-join" aria-labelledby="joinTitle">
+          <h2 id="joinTitle">🔑 Mit Code beitreten</h2>
+          <form id="joinForm" autocomplete="off" novalidate>
+            <div id="joinGame" class="ph-chips" role="group" aria-label="Spiel">
+              <button type="button" class="ph-chip" data-game="auto">🔎 Automatisch</button>
+              <button type="button" class="ph-chip" data-game="memelympics">🏅 Memelympics</button>
+              <button type="button" class="ph-chip" data-game="wiki-wandertag">🧭 Wiki-Wandertag</button>
+            </div>
+            <div class="ph-join-row">
+              <input id="joinCode" class="ph-code" type="text" inputmode="text" maxlength="4" placeholder="CODE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
+              <button id="joinGo" class="btn" type="submit">Los!</button>
+            </div>
+            <p id="joinStatus" class="ph-status hidden" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+    </section>
+
+    <div class="ph-section-head">
+      <h2>Spiele</h2>
+      <span class="muted" style="font-weight:700">Tipp auf einen Zettel zum Spielen</span>
+    </div>
+    <section class="ph-games">
+      <a class="ph-game note tilt-l" href="games/memelympics/">
+        <div class="ph-tags"><span class="ph-tag live">LIVE</span><span class="ph-tag">2–30 Spieler</span></div>
+        <span class="ph-icon" aria-hidden="true">🏅</span>
+        <h3>Memelympics</h3>
+        <p>Schnapp dir eine Meme-Vorlage, schreib die witzigste Caption, dann wird bewertet. Wer holt Gold?</p>
+        <span class="btn small ph-play">Spielen →</span>
+      </a>
+      <a class="ph-game note mint tilt-r" href="games/wiki-wandertag/">
+        <div class="ph-tags"><span class="ph-tag live">LIVE</span><span class="ph-tag">2–30 Spieler</span></div>
+        <span class="ph-icon" aria-hidden="true">🧭</span>
+        <h3>Wiki-Wandertag</h3>
+        <p>Von „Pizza“ zu „Mond“ – nur über Links in Wikipedia. Wer findet den kürzesten Weg und ist zuerst am Ziel?</p>
+        <span class="btn small ph-play">Spielen →</span>
+      </a>
+      <div class="ph-game note pink tilt-l soon" aria-disabled="true">
+                <span class="ph-icon" aria-hidden="true">✏️</span>
+        <h3>Kritzelkönig</h3>
+        <p>Einer malt, alle raten. Wer erkennt das Gekritzel zuerst?</p>
+      </div>
+      <div class="ph-game note blue tilt-r soon" aria-disabled="true">
+                <span class="ph-icon" aria-hidden="true">🕵️</span>
+        <h3>Wer lügt?</h3>
+        <p>Alle kennen das Wort, nur einer nicht. Findet den Hochstapler.</p>
+      </div>
+    </section>
+
+    <section class="ph-how" aria-label="So funktioniert's">
+      <div class="ph-step"><div class="ph-num">1</div><b>Lobby erstellen</b><p class="muted">Dein Browser wird zum Spielserver. Kein Konto, kein Download.</p></div>
+      <div class="ph-step"><div class="ph-num">2</div><b>Code teilen</b><p class="muted">Freunde geben den 4-Buchstaben-Code ein – hier oder direkt im Spiel, egal in welchem WLAN.</p></div>
+      <div class="ph-step"><div class="ph-num">3</div><b>Spielen</b><p class="muted">Die Daten laufen direkt zwischen euren Geräten (WebRTC). Kein Pausenhof-Server liest mit.</p></div>
+    </section>
+
+    <footer class="footer">
+      <div class="sig">made by Oskar</div>
+      <div>Pausenhof · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA)</div>
+    </footer>
+  </div>
+  <script type="module" src="shared/hub.js"></script>
+</body>
+</html>

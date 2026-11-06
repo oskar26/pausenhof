@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Krakelpost – Stille Post mit Zeichnungen · Zockbox</title>
+  <meta name="description" content="Krakelpost: Stille Post mit Zeichnungen. Schreib einen Satz, zeichne, rate – und lacht am Ende über die Alben. Gratis im Browser, ohne Anmeldung.">
+  <meta name="theme-color" content="#0b0a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='80' font-size='80' text-anchor='middle'>✏️</text></svg>">
+  <link rel="preload" href="../../shared/fonts/Unbounded-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="game.css">
+  <script src="../../shared/vendor/peerjs.min.js"></script>
+</head>
+<body class="on-start">
+  <div class="bg" aria-hidden="true">
+    <svg class="bg-scribbles" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">
+      <path d="M-20 120 C 60 60, 120 180, 200 110 S 340 40, 430 140" stroke="#7c5cff" />
+      <path d="M-10 420 C 80 380, 90 500, 180 450 S 320 360, 420 470" stroke="#ff4fd8" />
+      <path d="M-30 700 C 40 640, 160 760, 240 690 S 380 640, 430 720" stroke="#c6ff3d" />
+      <path d="M300 250 q 20 -30 40 0 t 40 0" stroke="#3de0ff" />
+      <path d="M40 300 l 12 -12 l 12 12 l 12 -12 l 12 12" stroke="#ffb347" />
+    </svg>
+  </div>
+
+  <!-- KOPFZEILE -->
+  <header class="hdr" id="hdr">
+    <a class="back-zb" href="../../" id="zbBack">← Zockbox</a>
+    <div class="hdr-mid" id="hdrMid">
+      <span class="hdr-step hidden" id="hdrStep"></span>
+      <span class="hdr-title" id="hdrTitle"></span>
+    </div>
+    <div class="hdr-right">
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="Ton an/aus">🔊</button>
+      <button class="icon-btn hidden" id="leaveBtn" type="button" aria-label="Lobby verlassen">🚪</button>
+    </div>
+    <div class="timer hidden" id="timer"><div class="timer-fill" id="timerFill"></div><span class="timer-txt" id="timerTxt"></span></div>
+  </header>
+
+  <main class="main" id="main">
+
+    <!-- START -->
+    <section id="scr-start" class="screen">
+      <div class="hero">
+        <div class="stamp" aria-hidden="true"><span>✏️</span></div>
+        <h1 class="logo" aria-label="Krakelpost"><span class="l1">Krakel</span><span class="l2">post</span></h1>
+        <p class="tagline">Stille Post mit Zeichnungen. Schreiben, krakeln, raten – und am Ende lachen.</p>
+      </div>
+
+      <div class="card profile-card">
+        <h2 class="card-h">Avatar und Nickname auswählen</h2>
+        <div class="prof-row">
+          <button class="avatar-big" id="avatarBtn" type="button" aria-label="Avatar ändern"><span id="avatarEmoji">🐸</span><i>✎</i></button>
+          <div class="name-wrap">
+            <input id="nameInput" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false" enterkeyhint="done">
+            <button class="dice" id="diceBtn" type="button" aria-label="Zufälliger Name">🎲</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="play-grid">
+        <button class="play-card quick" id="quickBtn" type="button">
+          <span class="pc-ico" aria-hidden="true">⚡</span>
+          <span class="pc-t">Schnelles Spiel</span>
+          <span class="pc-s">Rein in eine offene Lobby</span>
+        </button>
+        <button class="play-card host" id="createBtn" type="button">
+          <span class="pc-ico" aria-hidden="true">🏠</span>
+          <span class="pc-t">Lobby erstellen</span>
+          <span class="pc-s">Privat, mit Code für Freunde</span>
+        </button>
+      </div>
+
+      <form class="card code-card" id="codeForm" autocomplete="off">
+        <h2 class="card-h">Mit Code beitreten</h2>
+        <div class="code-row">
+          <input id="codeInput" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Lobby-Code (4 Buchstaben)">
+          <button class="btn lime" id="codeBtn" type="submit">Beitreten</button>
+        </div>
+      </form>
+      <button class="link-btn" id="browseBtn" type="button">🌐 Öffentliche Lobbys ansehen</button>
+
+      <section class="howto" id="howto">
+        <h2 class="sec-h">Spielanleitung</h2>
+        <ol class="steps">
+          <li><b>1. Sprechen ist besser</b><span>Lade deine Freunde zu einem Sprachanruf ein (z. B. Discord) – oder sitzt zusammen.</span></li>
+          <li><b>2. Zeit zum Schreiben</b><span>Jeder Spieler muss einen lustigen Satz schreiben.</span></li>
+          <li><b>3. Zeit zum Zeichnen</b><span>Du bekommst einen schrägen Satz von jemand anderem zum Zeichnen.</span></li>
+          <li><b>4. Was ist das?</b><span>Versuche, eine der verrückten Zeichnungen zu beschreiben.</span></li>
+          <li><b>5. Schau, was passiert</b><span>Am Ende zeigt der Spielleiter jedes Album Schritt für Schritt. Liken, lachen, herunterladen.</span></li>
+        </ol>
+        <details class="faq"><summary>Welche Modi gibt es?</summary><p>Normal, Imitation, Animation, Eisbrecher, Fremdkörper, Ergänzen, Meisterwerk, Story, Fehlendes Teil, Geheimnis, Koop, Punkte, Sandwich, Hintergrund, Solo – dazu Speedrun und Kein Druck. Der Spielleiter wählt in der Lobby unter „Voreinstellungen“.</p></details>
+        <details class="faq"><summary>Wie viele können mitspielen?</summary><p>2 bis 30. Standard ist 10 – der Spielleiter kann das ändern. Wer mitten im Spiel kommt, schaut zu und ist im nächsten Spiel dabei.</p></details>
+        <details class="faq"><summary>Brauche ich ein Konto?</summary><p>Nein. Die Daten laufen direkt zwischen euren Geräten (WebRTC). Es gibt keinen Server, der mitliest.</p></details>
+      </section>
+      <footer class="foot"><b>made by Oskar</b><span>Krakelpost · ein Spiel in der <a href="../../">Zockbox</a> · GIF-Export mit omggif (MIT) · Schriften: Unbounded &amp; Inter (SIL OFL)</span></footer>
+    </section>
+
+    <!-- EINLADUNG -->
+    <section id="scr-invite" class="screen hidden">
+      <div class="card invite-card">
+        <div class="stamp small" aria-hidden="true"><span>💌</span></div>
+        <h2 class="invite-h">Post für dich! Du wurdest in eine Lobby eingeladen.</h2>
+        <div class="prof-row center">
+          <button class="avatar-big" id="avatarBtn2" type="button" aria-label="Avatar ändern"><span id="avatarEmoji2">🐸</span><i>✎</i></button>
+          <div class="name-wrap">
+            <input id="nameInput2" type="text" maxlength="16" placeholder="Dein Nickname" autocomplete="off" spellcheck="false">
+            <button class="dice" id="diceBtn2" type="button" aria-label="Zufälliger Name">🎲</button>
+          </div>
+        </div>
+        <button class="btn lime big" id="inviteJoinBtn" type="button">Start</button>
+        <button class="link-btn" id="inviteBack" type="button">Zurück</button>
+      </div>
+    </section>
+
+    <!-- ÖFFENTLICHE LOBBYS -->
+    <section id="scr-public" class="screen hidden">
+      <div class="card">
+        <div class="row-between"><h2 class="card-h">Öffentliche Lobbys</h2><button class="btn small ghost" id="refreshBtn" type="button">↻ Neu laden</button></div>
+        <div id="browseList" class="browse-list"></div>
+      </div>
+      <button class="link-btn" data-go="start" type="button">Zurück</button>
+    </section>
+
+    <!-- LOBBY -->
+    <section id="scr-lobby" class="screen hidden">
+      <div class="lobby">
+        <div class="card players-card">
+          <div class="row-between"><h2 class="card-h">Spieler <span id="pCount">1/10</span></h2><span class="code-pill" id="codePill" title="Code antippen zum Kopieren"></span></div>
+          <div class="player-grid" id="playerGrid"></div>
+          <div class="invite-row">
+            <button class="btn violet" id="inviteBtn" type="button">🔗 Einladen</button>
+            <button class="btn ghost" id="qrHint" type="button">Code zeigen</button>
+          </div>
+        </div>
+
+        <div class="card set-card">
+          <p class="guest-wait hidden" id="guestWait">Warten, bis der Leiter das Spiel eingerichtet und gestartet hat ;)</p>
+          <div class="tabs" id="lobbyTabs" role="tablist">
+            <button class="tab on" data-tab="modes" type="button" role="tab">Voreinstellungen</button>
+            <button class="tab" data-tab="settings" type="button" role="tab">Einstellungen</button>
+          </div>
+          <div id="tab-modes" class="tab-body">
+            <div class="mode-grid" id="modeGrid"></div>
+          </div>
+          <div id="tab-settings" class="tab-body hidden">
+            <div class="set-list" id="setList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="start-bar" id="startBar">
+        <div class="sb-info" id="sbInfo"></div>
+        <button class="btn lime big" id="startBtn" type="button">Start</button>
+      </div>
+    </section>
+
+    <!-- SPIEL: AUFGABE -->
+    <section id="scr-play" class="screen hidden">
+      <div class="task" id="task">
+        <div class="task-head" id="taskHead">
+          <div class="th-kicker" id="thKicker"></div>
+          <div class="th-title" id="thTitle"></div>
+        </div>
+
+        <!-- Vorgabe -->
+        <div class="prompt hidden" id="prompt"><span class="pr-from" id="prFrom"></span><p class="pr-text" id="prText"></p></div>
+        <div class="ref hidden" id="ref">
+          <img id="refImg" alt="Zeichnung, die du beschreiben sollst">
+          <span class="ref-from" id="refFrom"></span>
+        </div>
+        <button class="btn pink big hidden" id="copyStartBtn" type="button">Zeichne es nach!</button>
+
+        <!-- Schreiben -->
+        <form class="write hidden" id="writeBox" autocomplete="off">
+          <div class="write-row">
+            <input id="writeInput" type="text" maxlength="120" placeholder="Schreib hier deinen Satz …" autocomplete="off" spellcheck="false" enterkeyhint="done">
+            <button class="dice" id="ideaBtn" type="button" aria-label="Idee würfeln" title="Idee würfeln">🎲</button>
+          </div>
+          <div class="write-meta"><span id="writeCount">0/120</span></div>
+        </form>
+
+        <!-- Zeichnen -->
+        <div class="draw hidden" id="drawBox">
+          <div class="board-wrap">
+            <div class="board" id="board">
+              <img class="layer under hidden" id="underImg" alt="">
+              <img class="layer onion hidden" id="onionImg" alt="">
+              <canvas class="layer main" id="cvMain" width="800" height="600"></canvas>
+              <canvas class="layer live" id="cvLive" width="800" height="600"></canvas>
+              <div class="corpse-guide hidden" id="corpseGuide"><span class="cg-top"></span><span class="cg-bot"></span></div>
+              <div class="secret-veil hidden" id="secretVeil"><span>🤫 Geheimnis – du siehst deine Striche nicht</span></div>
+              <div class="cursor-dot hidden" id="cursorDot"></div>
+            </div>
+          </div>
+          <div class="tools" id="tools">
+            <div class="tool-row tools-main">
+              <button class="tool on" data-tool="pen" type="button" title="Stift (B)" aria-label="Stift">✏️</button>
+              <button class="tool" data-tool="eraser" type="button" title="Radierer (E)" aria-label="Radierer">🧽</button>
+              <button class="tool" data-tool="fill" type="button" title="Fülleimer (G)" aria-label="Fülleimer">🪣</button>
+              <button class="tool" data-tool="line" type="button" title="Linie (L)" aria-label="Linie">╱</button>
+              <button class="tool" data-tool="rect" type="button" title="Rechteck (R)" aria-label="Rechteck">▭</button>
+              <button class="tool" data-tool="ellipse" type="button" title="Kreis (O)" aria-label="Kreis">◯</button>
+              <span class="tool-sep"></span>
+              <button class="tool" id="undoBtn" type="button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↶</button>
+              <button class="tool" id="redoBtn" type="button" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">↷</button>
+              <button class="tool danger" id="clearBtn" type="button" title="Leeren" aria-label="Leeren">🗑️</button>
+            </div>
+            <div class="tool-row sizes" id="sizeRow"></div>
+            <div class="tool-row palette" id="palette"></div>
+            <div class="tool-row extra">
+              <label class="opacity">Deckkraft <input type="range" id="opacityRange" min="15" max="100" step="5" value="100"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="task-foot">
+          <button class="btn lime big" id="doneBtn" type="button">Fertig!</button>
+        </div>
+      </div>
+
+      <!-- Warten -->
+      <div class="waiting hidden" id="waiting">
+        <div class="wait-art" aria-hidden="true"><span class="env">✉️</span></div>
+        <h2 id="waitTitle">Warte auf die anderen …</h2>
+        <p id="waitSub"></p>
+        <div class="done-list" id="doneList"></div>
+        <button class="btn ghost" id="editBtn" type="button">✏️ Bearbeiten</button>
+        <button class="btn pink hidden" id="forceBtn" type="button">⏭ Runde jetzt beenden</button>
+      </div>
+    </section>
+
+    <!-- ALBEN / PRÄSENTATION -->
+    <section id="scr-album" class="screen hidden">
+      <div class="album-top">
+        <div class="album-who" id="albumWho"></div>
+        <div class="album-nav" id="albumNav"></div>
+      </div>
+      <div class="album" id="album"></div>
+      <div class="album-bar" id="albumBar">
+        <button class="btn ghost small" id="dlPngBtn" type="button">⤓ Bild</button>
+        <button class="btn ghost small" id="dlGifBtn" type="button">⤓ GIF</button>
+        <span class="grow"></span>
+        <button class="btn ghost small hidden" id="autoBtn" type="button">▶ Auto</button>
+        <button class="btn lime" id="nextBtn" type="button">Weiter ▸</button>
+      </div>
+    </section>
+
+    <!-- ENDE -->
+    <section id="scr-end" class="screen hidden">
+      <div class="end-head">
+        <div class="stamp" aria-hidden="true"><span>📬</span></div>
+        <h2 class="end-h">Alle Alben sind zugestellt!</h2>
+      </div>
+      <div class="card score-card hidden" id="scoreCard"></div>
+      <div class="album-list" id="albumList"></div>
+      <div class="end-btns">
+        <button class="btn lime big" id="againBtn" type="button">Zurück zur Lobby</button>
+        <p class="end-note" id="endNote"></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- CHAT -->
+  <button class="chat-fab hidden" id="chatFab" type="button" aria-label="Chat öffnen">💬<span class="badge hidden" id="chatBadge">0</span></button>
+  <aside class="chat hidden" id="chat">
+    <div class="chat-head"><b>Chat</b><button class="icon-btn" id="chatClose" type="button" aria-label="Chat schließen">✕</button></div>
+    <div class="chat-log" id="chatLog"></div>
+    <form class="chat-form" id="chatForm" autocomplete="off"><input id="chatInput" type="text" maxlength="200" placeholder="Schreib was …"><button class="btn small lime" type="submit">Senden</button></form>
+  </aside>
+
+  <div class="modal hidden" id="modal" role="dialog" aria-modal="true"><div class="modal-card" id="modalCard"></div></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="game.js"></script>
+  <script type="module" src="../../shared/tarnung.js"></script>
+</body>
+</html>

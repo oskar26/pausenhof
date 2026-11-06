@@ -21,8 +21,35 @@
   <link rel="preload" href="shared/fonts/Unbounded-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="shared/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="shared/zockbox.css">
+  <script>
+    // Flüster-Intro: nur einmal pro Tab, nicht bei "Intro aus", reduzierter Bewegung, Tarnmodus oder Einladungslink.
+    (function () {
+      var d = document.documentElement, skip = true;
+      try {
+        skip = localStorage.getItem('zb_intro') === 'off' || localStorage.getItem('zb_tarn_on') === '1' ||
+          sessionStorage.getItem('zb_intro_seen') === '1' || /[?&]join=/.test(location.search) ||
+          matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!skip) sessionStorage.setItem('zb_intro_seen', '1');
+      } catch (e) {}
+      d.classList.add(skip ? 'zb-no-intro' : 'zb-intro-on');
+    })();
+  </script>
 </head>
 <body>
+  <div class="zb-intro" id="zbIntro" aria-hidden="true">
+    <div class="zb-intro-in">
+      <svg class="zb-intro-face" viewBox="0 0 120 120" aria-hidden="true">
+        <defs><linearGradient id="zbIg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#ff4fd8"/></linearGradient></defs>
+        <circle cx="60" cy="60" r="52" fill="url(#zbIg)"/>
+        <path d="M36 50q8-7 16 0M68 50q8-7 16 0" fill="none" stroke="#1a1030" stroke-width="5" stroke-linecap="round"/>
+        <path d="M46 82q14 6 28 0" fill="none" stroke="#1a1030" stroke-width="5" stroke-linecap="round"/>
+        <rect class="zb-intro-finger" x="53" y="62" width="14" height="44" rx="7" fill="#c6ff3d" stroke="#1a1030" stroke-width="3"/>
+      </svg>
+      <p class="zb-intro-psst"><span>p</span><span>s</span><span>s</span><span>t</span><span>…</span></p>
+      <p class="zb-intro-sub">die Zockbox ist offen</p>
+    </div>
+    <span class="zb-intro-skip">Tippen zum Überspringen</span>
+  </div>
   <div class="zb-bg" aria-hidden="true"></div>
 
   <header class="zb-top">
@@ -47,7 +74,7 @@
 
     <section class="zb-hero">
       <div class="zb-hero-text">
-        <span class="zb-kicker"><i class="zb-dot" aria-hidden="true"></i> 2 Spiele live · gratis</span>
+        <div class="zb-kick-row"><span class="zb-kicker"><i class="zb-dot" aria-hidden="true"></i> 4 Spiele live · gratis</span><span class="zb-psst">🤫 psst… nur für deine Leute</span></div>
         <h1>Zocken mit Freunden.<br><span class="zb-grad">Direkt im Browser.</span></h1>
         <p class="zb-lead">Lobby erstellen, Code teilen, losspielen. Kein Konto, kein Download – bis zu 30 Leute pro Runde, auf Handy, iPad und Laptop.</p>
       </div>
@@ -66,6 +93,8 @@
             <button type="button" class="zb-chip" data-game="auto" title="Spiel automatisch erkennen">✨ Auto</button>
             <button type="button" class="zb-chip" data-game="machs-meme">Mach's Meme</button>
             <button type="button" class="zb-chip" data-game="wikirennen">Wikirennen</button>
+            <button type="button" class="zb-chip" data-game="kritzel-duell">Kritzel-Duell</button>
+            <button type="button" class="zb-chip" data-game="krakelpost">Krakelpost</button>
           </div>
           <p id="joinStatus" class="zb-status hidden" aria-live="polite"></p>
         </form>
@@ -119,23 +148,45 @@
           <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
         </div>
       </a>
+
+      <a class="zb-game" href="games/kritzel-duell/">
+        <div class="zb-cover zb-cover-draw" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice"><path d="M20 90 C40 20, 70 20, 80 60 S120 110, 140 50 S175 20, 185 70" /><path class="b" d="M30 30 q20 20 40 0 t40 0" /></svg>
+          <span class="draw-word">K _ T Z _</span>
+          <span class="draw-pen">✏️</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Zeichnen</span></div>
+          <h3>Kritzel-Duell</h3>
+          <p>Einer zeichnet, alle raten. Wer das Gekritzel zuerst erkennt, kassiert die meisten Punkte.</p>
+          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+      </a>
+
+      <a class="zb-game" href="games/krakelpost/">
+        <div class="zb-cover zb-cover-post" aria-hidden="true">
+          <div class="post-chain">
+            <span class="post-card c1">„Katze auf Skateboard“</span>
+            <span class="post-arrow">→</span>
+            <span class="post-card c2"><svg viewBox="0 0 60 44"><path d="M8 34h44M14 34a3 3 0 1 0 0 .1M46 34a3 3 0 1 0 0 .1M20 30c0-8 6-14 13-14s11 5 11 12M24 18l-3-8 7 5M38 16l4-7 1 9" /></svg></span>
+            <span class="post-arrow">→</span>
+            <span class="post-card c3">„Hund im Auto?“</span>
+          </div>
+          <span class="post-env">✉️</span>
+        </div>
+        <div class="zb-game-body">
+          <div class="zb-tags"><span class="zb-tag zb-live">LIVE</span><span class="zb-tag">2–30 Spieler</span><span class="zb-tag">Party</span></div>
+          <h3>Krakelpost</h3>
+          <p>Stille Post mit Zeichnen: Satz wird Bild, Bild wird Satz – und am Ende kommt was völlig anderes raus.</p>
+          <span class="zb-play"><span>Spielen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+      </a>
     </section>
 
     <div class="zb-sec-head">
       <h2>Bald in der Box</h2>
     </div>
     <section class="zb-soon" aria-label="Bald verfügbar">
-      <div class="zb-game zb-small" aria-disabled="true">
-        <div class="zb-cover zb-cover-draw" aria-hidden="true">
-          <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice"><path d="M20 90 C40 20, 70 20, 80 60 S120 110, 140 50 S175 20, 185 70" /><path class="b" d="M30 30 q20 20 40 0 t40 0" /></svg>
-          <span class="draw-pen">✏️</span>
-        </div>
-        <div class="zb-game-body">
-          <div class="zb-tags"><span class="zb-tag zb-bald">BALD</span></div>
-          <h3>Kritzel-Duell</h3>
-          <p>Einer malt, alle raten. Wer erkennt das Gekritzel zuerst?</p>
-        </div>
-      </div>
       <div class="zb-game zb-small" aria-disabled="true">
         <div class="zb-cover zb-cover-lie" aria-hidden="true">
           <span class="lie-q q1">?</span><span class="lie-q q2">?</span><span class="lie-q q3">?</span>
@@ -162,6 +213,17 @@
       </div>
       <div id="phAvatarGrid" class="zb-avatar-grid hidden" role="group" aria-label="Avatare"></div>
       <p class="zb-hint zb-prof-foot">Gilt für alle Spiele und bleibt nur auf diesem Gerät. Tipp auf den Avatar zum Ändern.</p>
+
+      <details class="zb-settings" id="einstellungen">
+        <summary><span>⚙️ Einstellungen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></summary>
+        <div class="zb-set-body">
+          <div class="zb-set-row">
+            <div class="zb-set-txt"><b>Intro beim Öffnen</b><span>Das kurze „psst…“ beim Start der Startseite.</span></div>
+            <button type="button" class="zb-switch" role="switch" id="zbIntroOn" aria-checked="true" aria-label="Intro beim Öffnen"><i></i></button>
+          </div>
+          <div id="zbTarnSettings" class="zb-tarn-set"></div>
+        </div>
+      </details>
     </section>
 
     <section class="zb-how" aria-label="So funktioniert's">
@@ -175,10 +237,12 @@
   <footer class="zb-foot">
     <div class="zb-wrap">
       <div class="zb-sig">made by <b>Oskar</b></div>
+      <p class="zb-foot-note">Zum Spaß mit Freunden. Bitte halte dich an die Regeln deiner Schule.</p>
       <p>Zockbox · Verbindung über PeerJS · Memes über imgflip &amp; memegen.link · Texte aus Wikipedia (CC BY-SA 4.0)</p>
     </div>
   </footer>
 
+  <script type="module" src="shared/tarnung.js"></script>
   <script type="module" src="shared/hub.js"></script>
 </body>
 </html>

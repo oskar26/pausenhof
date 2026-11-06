@@ -1,15 +1,16 @@
-// Zockbox – Startseite (Bibliothek): Profil, "Mit Code beitreten", iPhone-Installationshinweis.
+// Zockbox – Startseite (Bibliothek): Flüster-Intro, Profil, Einstellungen, "Mit Code beitreten", iPhone-Installationshinweis.
 // made by Oskar
 import { AVATARS, getProfile, setName, setAvatar, randomName, NAME_MAX } from './profile.js';
 
 // Spiele, die per Code beitreten können.
 // id = interner Schlüssel für die Auswahl-Chips (data-game in index.html).
-// peerPrefixes = mögliche Peer-ID-Präfixe (aus shared/net.js: `pausenhof-${GAME_ID}-p-CODE`).
-// Das Präfix 'pausenhof-' und die GAME_IDs bleiben absichtlich so, damit alte und neue Versionen zusammenpassen.
+// peerPrefixes = mögliche Peer-ID-Präfixe (aus shared/net.js: `zockbox-${GAME_ID}-p-CODE`).
 // Wenn ein Spiel seine GAME_ID ändert, hier anpassen.
 const GAMES = [
-  { id: 'memelympics', name: "Mach's Meme", icon: '😂', path: 'games/machs-meme/', peerPrefixes: ['pausenhof-memelympics-v1-', 'pausenhof-memelympics-'] },
-  { id: 'wiki-wandertag', name: 'Wikirennen', icon: '🏁', path: 'games/wikirennen/', peerPrefixes: ['pausenhof-wiki-wandertag-v1-', 'pausenhof-wiki-wandertag-', 'pausenhof-wikiwandertag-v1-'] },
+  { id: 'machs-meme', name: "Mach's Meme", icon: '😂', path: 'games/machs-meme/', peerPrefixes: ['zockbox-machs-meme-v1-'] },
+  { id: 'wikirennen', name: 'Wikirennen', icon: '🏁', path: 'games/wikirennen/', peerPrefixes: ['zockbox-wikirennen-v1-'] },
+  { id: 'kritzel-duell', name: 'Kritzel-Duell', icon: '✏️', path: 'games/kritzel-duell/', peerPrefixes: ['zockbox-kritzel-duell-v1-'] }, // GAME_ID 'kritzel-duell-v1'
+  { id: 'krakelpost', name: 'Krakelpost', icon: '✉️', path: 'games/krakelpost/', peerPrefixes: ['zockbox-krakelpost-v1-'] }, // GAME_ID 'krakelpost-v1'
 ];
 const PEERJS_URL = new URL('./vendor/peerjs.min.js', import.meta.url).href;
 
@@ -211,6 +212,51 @@ function initInstallHint() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Flüster-Intro ("psst…") – nur Startseite. Ob es läuft, entscheidet das kleine Inline-Skript im <head>
+// (Klasse zb-intro-on). Das Ausblenden passiert per CSS-Animation; hier nur Überspringen + Aufräumen.
+// ---------------------------------------------------------------------------
+const INTRO_MS = 2200;
+function initIntro() {
+  const el = $('zbIntro');
+  const root = document.documentElement;
+  if (!el) return;
+  if (!root.classList.contains('zb-intro-on')) { el.remove(); return; }
+  let done = false;
+  const end = () => {
+    if (done) return; done = true;
+    root.classList.remove('zb-intro-on'); root.classList.add('zb-intro-done');
+    el.remove();
+    window.removeEventListener('keydown', onKey, true);
+  };
+  const skip = () => {
+    if (done) return;
+    el.classList.add('zb-intro-out');
+    setTimeout(end, 260);
+  };
+  const onKey = () => skip();
+  el.addEventListener('pointerdown', skip);
+  window.addEventListener('keydown', onKey, true);
+  el.addEventListener('animationend', (e) => { if (e.target === el) end(); });
+  setTimeout(end, INTRO_MS + 400); // Sicherheitsnetz
+}
+
+function initIntroSetting() {
+  const sw = $('zbIntroOn');
+  if (!sw) return;
+  const isOn = () => { try { return localStorage.getItem('zb_intro') !== 'off'; } catch (e) { return true; } };
+  sw.setAttribute('aria-checked', String(isOn()));
+  sw.onclick = () => {
+    const next = !isOn();
+    try { if (next) localStorage.removeItem('zb_intro'); else localStorage.setItem('zb_intro', 'off'); } catch (e) {}
+    sw.setAttribute('aria-checked', String(next));
+  };
+  // #einstellungen in der URL klappt die Einstellungen auf
+  if (location.hash === '#einstellungen') $('einstellungen').open = true;
+}
+
+initIntro();
+initIntroSetting();
 initProfile();
 initJoin();
 initInstallHint();

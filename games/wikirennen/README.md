@@ -31,12 +31,12 @@ Platzierung (Zeit, Klicks, Ziele, Zurück-Klicks, Sekunden pro Klick, Punkte und
 Platz 1: 100, Platz 2: 80, dann 65, 55, 45, 40, 35, 30, 25, 20, danach je 10. Kürzester Weg (bei mindestens 2 im Ziel): +10.
 
 ## Technik
-Reine statische Seite. Multiplayer über `../../shared/net.js` (PeerJS/WebRTC, der Host-Browser ist der Spielserver), Spiel-ID bleibt `wiki-wandertag-v1` (die Zockbox-Startseite findet Lobbys darüber). Einzelspiel nutzt dieselbe Host-Logik lokal (`LocalRoom` in `game.js`). Kein eigener Server, keine Konten.
+Reine statische Seite. Multiplayer über `../../shared/net.js` (PeerJS/WebRTC, der Host-Browser ist der Spielserver), Spiel-ID bleibt `wikirennen-v1` (die Zockbox-Startseite findet Lobbys darüber). Einzelspiel nutzt dieselbe Host-Logik lokal (`LocalRoom` in `game.js`). Kein eigener Server, keine Konten.
 
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Seite und alle Bildschirme (Hauptseite, Tageschallenge, Stufen, Lobby, Countdown, Rennen, Ergebnis) |
-| `game.css` | Wikipedia-artige Oberfläche (Vector 2022 / Minerva), komplett selbst geschrieben; braucht kein `shared/pausenhof.css` mehr |
+| `game.css` | Wikipedia-artige Oberfläche (Vector 2022 / Minerva), komplett selbst geschrieben mehr |
 | `game.js` | Host-Logik, Client-Logik, Einzelspiel, Tageschallenge, Stufen, Power-ups, Teilen |
 | `wiki.js` | Wikipedia-API: Artikel, Namensräume, Zufall, Suche, Vorschau, Link-Prüfung, Sprachlinks, CSS, verbotene Artikel |
 | `wikiframe.js` / `wiki-frame.css` | Artikelrahmen im Wikipedia-Stil (Shadow-DOM) |

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kritzel-Duell – Zockbox</title>
+  <meta name="description" content="Kritzel-Duell: Einer zeichnet, alle raten. Das Mal- und Ratespiel für den Browser – gratis, ohne Anmeldung, mit Freunden per Code.">
+  <meta name="theme-color" content="#0a0b12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='80' font-size='80' text-anchor='middle'>✏️</text></svg>">
+  <link rel="stylesheet" href="../../shared/zockbox.css">
+  <link rel="stylesheet" href="game.css">
+  <script src="../../shared/vendor/peerjs.min.js"></script>
+</head>
+<body class="kd on-home">
+  <div class="zb-bg" aria-hidden="true"></div>
+
+  <!-- KOPFZEILE (Startseite) -->
+  <header class="kd-top" id="top">
+    <div class="kd-top-in">
+      <a class="kd-back" href="../../">← Zockbox</a>
+      <div class="kd-brand"><span class="kd-mark">✏️</span><b>Kritzel-Duell</b></div>
+      <button class="kd-ico-btn" id="soundBtnTop" type="button" aria-label="Ton an/aus">🔊</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- START -->
+    <section id="scr-home" class="screen kd-home">
+      <div class="kd-hero">
+        <div class="kd-hero-art" aria-hidden="true">
+          <svg viewBox="0 0 320 200"><path class="s1" d="M30 150 C60 40, 120 40, 140 110 S220 190, 250 80 S300 30, 300 120"/><path class="s2" d="M60 60 q25 25 50 0 t50 0"/><circle class="s3" cx="250" cy="150" r="22"/></svg>
+          <span class="kd-hero-pen">✏️</span>
+        </div>
+        <h1>Kritzel-<span class="zb-grad">Duell</span></h1>
+        <p class="kd-lead">Einer zeichnet, alle raten. Wer das Gekritzel zuerst erkennt, holt die meisten Punkte.</p>
+      </div>
+
+      <div class="kd-home-grid">
+        <div class="zb-panel kd-play">
+          <div class="kd-prof">
+            <button class="kd-av-btn" id="avatarBtn" type="button" aria-label="Avatar ändern"><span id="avatarEmoji">🐸</span><i>✎</i></button>
+            <input class="zb-input" id="nameInput" type="text" maxlength="16" placeholder="Gib deinen Namen ein" autocomplete="off" spellcheck="false" aria-label="Dein Name">
+            <button class="zb-btn zb-btn-ghost zb-dice" id="diceBtn" type="button" title="Zufälliger Name" aria-label="Zufälliger Name">🎲</button>
+          </div>
+          <button class="kd-big-btn kd-go" id="quickBtn" type="button"><span>Spielen!</span><small>Schnelles Spiel – öffentliche Lobby</small></button>
+          <button class="kd-big-btn kd-priv" id="createBtn" type="button"><span>Privaten Raum erstellen</span><small>Mit Freunden per Code oder Link</small></button>
+          <div class="kd-or"><span>oder mit Code beitreten</span></div>
+          <form class="zb-join-row" id="joinForm" autocomplete="off">
+            <input class="zb-code" id="codeInput" maxlength="4" placeholder="CODE" autocapitalize="characters" spellcheck="false" aria-label="Lobby-Code">
+            <button class="zb-btn zb-btn-primary" type="submit">Rein</button>
+          </form>
+        </div>
+
+        <div class="zb-panel kd-rooms">
+          <div class="zb-panel-head"><h2>Offene Lobbys</h2><button class="zb-btn zb-btn-ghost kd-small-btn" id="refreshBtn" type="button">↻ Aktualisieren</button></div>
+          <div id="roomList" class="kd-room-list"><p class="kd-empty">Tippe auf „Aktualisieren“, um offene Lobbys zu suchen.</p></div>
+        </div>
+      </div>
+
+      <h2 class="kd-sec">Wie gespielt wird</h2>
+      <div class="kd-how">
+        <div class="kd-step"><span class="kd-num">1</span><div><b>Wort wählen</b><p>Bist du dran, suchst du dir eins von mehreren Wörtern aus.</p></div></div>
+        <div class="kd-step"><span class="kd-num">2</span><div><b>Zeichnen – nicht schreiben!</b><p>Mal dein Wort mit Pinsel, Farben und Fülleimer. Buchstaben sind tabu.</p></div></div>
+        <div class="kd-step"><span class="kd-num">3</span><div><b>Raten lassen</b><p>Die anderen tippen ihre Tipps in den Chat. Je schneller jemand richtig liegt, desto mehr Punkte gibt's – auch für dich.</p></div></div>
+        <div class="kd-step"><span class="kd-num">4</span><div><b>Selbst raten</b><p>Ist jemand anderes dran, rätst du mit. Die Striche zeigen, wie viele Buchstaben das Wort hat, nach und nach kommen Hinweise.</p></div></div>
+        <div class="kd-step"><span class="kd-num">5</span><div><b>Gewinnen</b><p>Nach der letzten Runde steht der Sieger auf dem Podest. Viel Spaß!</p></div></div>
+      </div>
+
+      <footer class="zb-foot kd-foot">
+        <div class="zb-sig">made by <b>Oskar</b></div>
+        <p>Kritzel-Duell · ein Spiel in der <a href="../../">Zockbox</a> · eigene Wortliste · Verbindung per PeerJS/WebRTC, kein Server liest mit.</p>
+      </footer>
+    </section>
+
+    <!-- EINLADUNG -->
+    <section id="scr-invite" class="screen kd-home hidden">
+      <div class="zb-panel kd-invite">
+        <h2>Du wurdest eingeladen! ✏️</h2>
+        <p class="zb-hint" id="inviteHint">Such dir Namen und Avatar aus und spring rein.</p>
+        <div class="kd-prof">
+          <button class="kd-av-btn" id="avatarBtn2" type="button" aria-label="Avatar ändern"><span id="avatarEmoji2">🐸</span><i>✎</i></button>
+          <input class="zb-input" id="nameInput2" type="text" maxlength="16" placeholder="Gib deinen Namen ein" autocomplete="off" spellcheck="false" aria-label="Dein Name">
+        </div>
+        <button class="kd-big-btn kd-go" id="inviteJoinBtn" type="button"><span>Beitreten!</span></button>
+        <button class="kd-link" id="inviteBack" type="button">← Zur Startseite</button>
+      </div>
+    </section>
+
+    <!-- RAUM: Lobby + Spiel -->
+    <section id="scr-room" class="screen room hidden">
+      <div class="r-bar">
+        <button class="kd-ico-btn" id="leaveBtn" type="button" aria-label="Raum verlassen" title="Raum verlassen">✕</button>
+        <div class="r-clock" id="clock"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" class="ck-bg"/><circle cx="20" cy="20" r="17" class="ck-fg" id="clockArc"/></svg><span id="clockNum">–</span></div>
+        <div class="r-round" id="roundTxt">Auf Spieler warten…</div>
+        <div class="r-word" id="wordBox"><span class="w-desc" id="wordDesc">WARTEN</span><span class="w-word" id="wordTxt"></span></div>
+        <button class="kd-ico-btn" id="soundBtn" type="button" aria-label="Ton an/aus">🔊</button>
+        <button class="kd-ico-btn" id="gearBtn" type="button" aria-label="Einstellungen">⚙️</button>
+      </div>
+
+      <div class="r-stage" id="stage">
+        <!-- Lobby-Einstellungen -->
+        <div class="lobby" id="lobby">
+          <div class="lb-scroll">
+            <div class="lb-invite">
+              <div><small>Einladungscode</small><b id="codeTxt" class="lb-code">••••</b></div>
+              <button class="zb-btn zb-btn-ghost kd-small-btn" id="showCodeBtn" type="button">Anzeigen</button>
+              <button class="zb-btn kd-small-btn kd-copy" id="copyBtn" type="button">Link kopieren 🔗</button>
+            </div>
+            <div class="lb-grid">
+              <label class="set"><span>👥 Spieler</span><select id="setMax"></select></label>
+              <label class="set"><span>🌐 Sprache</span><select id="setLang"><option value="de">Deutsch</option></select></label>
+              <label class="set"><span>⏱️ Zeit</span><select id="setTime"></select></label>
+              <label class="set"><span>🔁 Runden</span><select id="setRounds"></select></label>
+              <label class="set"><span>🎭 Wort-Modus</span><select id="setMode"><option value="normal">Normal</option><option value="hidden">Versteckt</option><option value="combo">Kombination</option></select></label>
+              <label class="set"><span>🃏 Wort-Anzahl</span><select id="setCount"></select></label>
+              <label class="set"><span>💡 Hinweise</span><select id="setHints"></select></label>
+            </div>
+            <label class="set set-wide"><span>✍️ Eigene Wörter</span>
+              <textarea id="setCustom" rows="3" maxlength="10000" placeholder="Minimum von 10 Wörtern. 1-32 Buchstaben pro Wort. 10000 Buchstaben maximal. Getrennt durch ein , (Komma)"></textarea></label>
+            <label class="chk"><input type="checkbox" id="setCustomOnly"><span>Nur eigene Wörter benutzen</span></label>
+            <p class="lb-modehint" id="modeHint"></p>
+          </div>
+          <div class="lb-foot">
+            <p class="lb-msg" id="lobbyMsg">Auf Spieler warten…</p>
+            <button class="kd-big-btn kd-go lb-start" id="startBtn" type="button"><span>Starten!</span></button>
+          </div>
+        </div>
+
+        <!-- Zeichenfläche -->
+        <div class="board-wrap hidden" id="boardWrap">
+          <div class="board" id="board">
+            <canvas id="canvas" width="800" height="600" aria-label="Zeichenfläche"></canvas>
+            <div class="bubbles" id="bubbles"></div>
+            <div class="rate hidden" id="rate">
+              <button type="button" class="rate-btn up" data-like="1" aria-label="Daumen hoch">👍</button>
+              <button type="button" class="rate-btn down" data-like="0" aria-label="Daumen runter">👎</button>
+            </div>
+            <div class="ov hidden" id="ov"><div class="ov-card" id="ovCard"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="r-tools hidden" id="tools">
+        <div class="t-row">
+          <div class="t-cur" id="curColor" title="Aktuelle Farbe (links/rechts)"><span class="c1" id="curC1"></span><span class="c2" id="curC2"></span></div>
+          <div class="palette" id="palette"></div>
+        </div>
+        <div class="t-row t-row2">
+          <div class="sizes" id="sizes"></div>
+          <div class="t-tools" id="toolBtns">
+            <button type="button" class="tool on" data-tool="brush" title="Stift (B)">🖌️<i>Stift</i></button>
+            <button type="button" class="tool" data-tool="eraser" title="Radierer (E)">🧽<i>Radierer</i></button>
+            <button type="button" class="tool" data-tool="fill" title="Füllen (F)">🪣<i>Füllen</i></button>
+            <button type="button" class="tool" data-tool="pick" title="Pipette (P)">💧<i>Pipette</i></button>
+            <button type="button" class="tool act" id="undoBtn" title="Rückgängig (U / Strg+Z)">↩️<i>Rückgängig</i></button>
+            <button type="button" class="tool act danger" id="clearBtn" title="Löschen (C)">🗑️<i>Löschen</i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="r-players" id="players"></div>
+
+      <div class="r-chat">
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <input id="chatInput" type="text" maxlength="100" placeholder="Rate das Wort hier …" enterkeyhint="send" autocomplete="off" autocorrect="off" spellcheck="false">
+          <button type="submit" aria-label="Senden">➤</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS / POPOVER / TOASTS -->
+  <div class="modal hidden" id="modal" role="dialog" aria-modal="true"><div class="modal-card" id="modalCard"></div></div>
+  <div class="pop hidden" id="gearPop">
+    <h3>Einstellungen</h3>
+    <label class="pop-row">Lautstärke <input type="range" id="volRange" min="0" max="100" step="5"></label>
+    <label class="chk"><input type="checkbox" id="muteChk"><span>Ton aus</span></label>
+    <label class="chk"><input type="checkbox" id="filterChk"><span>Schlechte Wörter im Chat filtern</span></label>
+    <label class="chk"><input type="checkbox" id="bubbleChk"><span>Chat-Blasen auf der Zeichenfläche</span></label>
+    <p class="pop-foot">Tastenkürzel: B Stift · E Radierer · F Füllen · P Pipette · U Rückgängig · C Löschen · 1–5 Größe</p>
+    <p class="pop-foot">made by Oskar</p>
+  </div>
+  <div class="toasts" id="toasts"></div>
+
+  <script type="module" src="game.js"></script>
+  <script type="module" src="../../shared/tarnung.js"></script>
+</body>
+</html>

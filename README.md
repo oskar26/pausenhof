@@ -5,7 +5,7 @@ Kein Konto, kein Download, keine Werbung. Lobby erstellen, 4-Buchstaben-Code an 
 
 *made by Oskar*
 
-👉 **https://oskar26.github.io/pausenhof/**
+👉 **https://oskar26.github.io/zockbox/**
 
 ---
 
@@ -15,14 +15,23 @@ Kein Konto, kein Download, keine Werbung. Lobby erstellen, 4-Buchstaben-Code an 
 |---|---|---|---|
 | 😂 **Mach's Meme** (`games/machs-meme/`) | Meme-Partyspiel: Alle bekommen dieselbe Meme-Vorlage, schreiben die witzigste Caption, dann wird abgestimmt. | 2–30 | live |
 | 🏁 **Wikirennen** (`games/wikirennen/`) | Wikipedia-Rennen: Vom Startartikel zum Zielartikel – nur über Links im Text. Wer ist zuerst da? | 2–30 | live |
-| ✏️ Kritzel-Duell | Einer malt, alle raten. | – | bald |
+| ✏️ **Kritzel-Duell** (`games/kritzel-duell/`) | Zeichnen und Raten: Einer zeichnet, alle raten. | 2–30 | live |
+| ✉️ **Krakelpost** (`games/krakelpost/`) | Stille Post mit Zeichnen: Satz wird Bild, Bild wird Satz. | 2–30 | live |
 | 🕵️ Wer lügt? | Alle kennen das Wort – nur einer nicht. Findet den Bluffer. | – | bald |
 
 ## ✨ Was die Zockbox kann
 
 - **Ein Profil für alle Spiele:** Name und Emoji-Avatar stellst du auf der Startseite unter „Dein Profil“ ein. Gespeichert wird nur in deinem Browser (`localStorage`: `ph_name`, `ph_avatar`).
 - **Mit Code beitreten:** Code auf der Startseite eintippen – die Zockbox sucht automatisch, in welchem Spiel die Lobby offen ist, und leitet dich hin (`games/<spiel>/?code=ABCD`). Klappt die Suche nicht, einfach das Spiel antippen.
-- **Einladungs-Link:** `https://oskar26.github.io/pausenhof/?join=ABCD` füllt den Code auf der Startseite schon aus.
+- **Einladungs-Link:** `https://oskar26.github.io/zockbox/?join=ABCD` füllt den Code auf der Startseite schon aus.
+- **Flüster-Intro:** Beim Öffnen der Startseite ein kurzes „psst…“ (ca. 2 s, einmal pro Tab). Antippen oder eine Taste überspringt es. Aus bei „Einstellungen → Intro beim Öffnen“ (`zb_intro = off`), bei *reduzierter Bewegung* im System und bei Einladungslinks (`?join=`).
+- **Tarnmodus (standardmäßig aus):** Unter *Dein Profil → Einstellungen* einschaltbar, gilt für die Startseite und alle Spiele, die `shared/tarnung.js` einbinden. Reine Oberflächen-Tarnung:
+  - *Tab-Tarnung:* Titel und Symbol des Browser-Tabs als „Notizen“, „Dokument – Unbenannt“, „Suche“, „Wiki-Artikel“ oder „Taschenrechner“ (eigene, selbst gezeichnete Symbole).
+  - *Panik-Taste:* Esc 2× schnell (Taste frei wählbar) oder der kleine Knopf unten links auf Handy/Tablet blendet eine Tarnseite ein: **Suche** („Suchfix“), **Lexikon-Artikel** (Photosynthese) oder **Dokument** (Bio-Notizen). Das Spiel läuft darunter weiter, die Verbindung bleibt. Zurück: dieselbe Taste 2× oder oben links 2× tippen.
+  - Gespeichert in `localStorage`: `zb_tarn_on`, `zb_tarn_tab`, `zb_tarn_page`, `zb_tarn_key`, `zb_tarn_fab`.
+  - Einbinden in ein Spiel (eine Zeile, z. B. vor `</body>` in `games/<spiel>/index.html`):
+    `<script type="module" src="../../shared/tarnung.js"></script>`
+    Optional im Spiel: `window.addEventListener('zb-tarnung', e => …e.detail.active…)`, z. B. um Sounds stummzuschalten.
 - **Wie eine App:** Auf iPhone/iPad in Safari *Teilen → Zum Home-Bildschirm*. Dann hat die Zockbox ein eigenes Icon und startet im Vollbild.
 
 ## 🔌 Wie funktioniert die Verbindung?
@@ -30,7 +39,7 @@ Kein Konto, kein Download, keine Werbung. Lobby erstellen, 4-Buchstaben-Code an 
 Die Zockbox hat **keinen eigenen Server**. Es sind nur statische Dateien (HTML, CSS, JavaScript).
 
 1. **Der Host-Browser ist der Spielserver.** Wer eine Lobby erstellt, dessen Browser verwaltet das Spiel: Spieler, Runden, Punkte.
-2. **PeerJS macht nur das „Hallo“.** Damit sich zwei Browser im Internet finden, benutzen wir den kostenlosen öffentlichen Vermittlungsserver von [PeerJS](https://peerjs.com/) (Signaling). Der Lobby-Code steckt in der Peer-ID, z. B. `pausenhof-memelympics-v1-p-ABCD`. (Das Präfix `pausenhof-` und die Spiel-IDs bleiben aus technischen Gründen so – sie sieht niemand.)
+2. **PeerJS macht nur das „Hallo“.** Damit sich zwei Browser im Internet finden, benutzen wir den kostenlosen öffentlichen Vermittlungsserver von [PeerJS](https://peerjs.com/) (Signaling). Der Lobby-Code steckt in der Peer-ID, z. B. `zockbox-machs-meme-v1-p-ABCD`. (Das Präfix `zockbox-` und die Spiel-IDs bleiben aus technischen Gründen so – sie sieht niemand.)
 3. **Danach geht alles direkt per WebRTC.** Sobald die Verbindung steht, laufen alle Spieldaten direkt zwischen den Geräten – nicht über einen Zockbox-Server.
 
 Die gemeinsame Netzwerk-Logik für alle Spiele steckt in `shared/net.js` (Klasse `Room`).
@@ -47,7 +56,8 @@ manifest.webmanifest   App-Infos für „Zum Home-Bildschirm“
 assets/                App-Icons (PNG)
 shared/zockbox.css     Design der Startseite (dunkler Game-Library-Look)
 shared/fonts/          Schriften (lokal, SIL Open Font License)
-shared/hub.js          Logik der Startseite (Profil, Code-Suche, Install-Tipp)
+shared/hub.js          Logik der Startseite (Intro, Profil, Einstellungen, Code-Suche, Install-Tipp)
+shared/tarnung.js      Tarnmodus (Tab-Tarnung + Panik-Taste), für Startseite und Spiele
 shared/profile.js      gemeinsames Spielerprofil (ph_name, ph_avatar)
 shared/net.js          Netzwerk-Kern (PeerJS + WebRTC)
 shared/vendor/         PeerJS (lokale Kopie)
@@ -59,11 +69,11 @@ games/<spiel>/         ein Ordner pro Spiel
 
 ## 🚀 Online stellen (GitHub Pages) – Schritt für Schritt
 
-Repo: **https://github.com/oskar26/pausenhof** – GitHub Pages ist dort schon eingeschaltet (Branch `main`, Ordner `/ (root)`).
+Repo: **https://github.com/oskar26/zockbox** – GitHub Pages ist dort schon eingeschaltet (Branch `main`, Ordner `/ (root)`).
 
 1. **Pull Request mergen:** Im Repo oben auf **Pull requests** → den offenen PR öffnen → **Merge pull request** → **Confirm merge**.
 2. **1–2 Minuten warten.** GitHub baut die Seite automatisch neu (unter **Actions** siehst du den Fortschritt).
-3. **Öffnen:** **https://oskar26.github.io/pausenhof/** – falls noch die alte Version kommt, Seite neu laden (am iPhone: Tab schließen und neu öffnen).
+3. **Öffnen:** **https://oskar26.github.io/zockbox/** – falls noch die alte Version kommt, Seite neu laden (am iPhone: Tab schließen und neu öffnen).
 4. **Testen:** Auf zwei Geräten öffnen, auf dem einen eine Lobby erstellen, auf dem anderen den Code eingeben.
 5. **Klappt keine Verbindung?** Dann blockiert das Netz vermutlich WebRTC oder peerjs.com. Mit mobilen Daten probieren.
 6. **Neue Version hochladen:** Änderungen einfach auf `main` pushen (oder per PR mergen) – Pages aktualisiert sich nach ca. 1–2 Minuten von selbst.

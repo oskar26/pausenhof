@@ -154,9 +154,29 @@ function initJoin() {
   chips.forEach((c) => c.addEventListener('click', () => { pick(c.dataset.game); setStatus(''); }));
   pick('auto');
 
+  // Vier Buchstaben-Kacheln zeigen, was im (unsichtbaren) Eingabefeld steht.
+  const tilesBox = input.closest('.zx-tiles');
+  const tiles = tilesBox ? [...tilesBox.querySelectorAll('.zx-tile')] : [];
+  const paint = () => {
+    const chars = [...input.value];
+    tiles.forEach((t, i) => {
+      t.textContent = chars[i] || '';
+      t.classList.toggle('cur', i === Math.min(chars.length, tiles.length - 1));
+    });
+  };
+  if (tilesBox) {
+    input.addEventListener('focus', () => { tilesBox.classList.add('focus'); paint(); });
+    input.addEventListener('blur', () => tilesBox.classList.remove('focus'));
+    // Cursor immer ans Ende, damit Tippen/Löschen zu den Kacheln passt
+    const toEnd = () => { try { const n = input.value.length; input.setSelectionRange(n, n); } catch (e) {} };
+    input.addEventListener('click', toEnd);
+    input.addEventListener('keyup', toEnd);
+  }
+
   input.addEventListener('input', () => {
     const v = cleanCode(input.value);
     if (v !== input.value) input.value = v;
+    paint();
     setStatus('');
   });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
@@ -191,6 +211,7 @@ function initJoin() {
   const pre = new URLSearchParams(location.search).get('join');
   if (pre) {
     input.value = cleanCode(pre);
+    paint();
     setStatus('Code eingetragen – tipp auf „Los“, um beizutreten.', 'ok');
   }
 }

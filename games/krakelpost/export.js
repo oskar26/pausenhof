@@ -2,9 +2,33 @@
 import { GifWriter } from './vendor/omggif.js';
 import { PALETTE } from './draw.js';
 
-const FONT = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
-const DISPLAY = "'Unbounded', system-ui, sans-serif";
-const C = { bg: '#0f0e1a', card: '#1b1930', violet: '#7c5cff', pink: '#ff4fd8', lime: '#c6ff3d', text: '#f2f3f8', muted: '#9aa0b8' };
+// Gleiche Schriften/Farben wie im Spiel (game.css): Papier, Tinte, Luftpost-Rot/Blau
+const FONT = "'KP UI', system-ui, -apple-system, 'Segoe UI', sans-serif";
+const HAND = "'KP Hand', 'Comic Sans MS', cursive";
+const INK = "'KP Ink', 'KP Hand', cursive";
+const TYPE = "'KP Type', 'Courier New', monospace";
+const C = { bg: '#f3ead6', card: '#fffaf0', red: '#ef4a36', blue: '#2f62e6', yellow: '#ffcd3c', ink: '#23284d', muted: '#565b7d', line: '#c7d6f3' };
+async function fontsReady() {
+  if (!document.fonts || !document.fonts.load) return;
+  try { await Promise.all([`400 40px ${HAND}`, `700 30px ${INK}`, `400 16px ${TYPE}`, `800 20px ${FONT}`].map((f) => document.fonts.load(f))); } catch (e) {}
+}
+function airmail(x, y0, w, h) { // Luftpost-Streifen
+  x.save(); x.beginPath(); x.rect(0, y0, w, h); x.clip();
+  for (let k = -h; k < w + h; k += 40) {
+    x.fillStyle = C.red; x.beginPath(); x.moveTo(k, y0 + h); x.lineTo(k + h, y0); x.lineTo(k + h + 12, y0); x.lineTo(k + 12, y0 + h); x.fill();
+    x.fillStyle = C.blue; x.beginPath(); x.moveTo(k + 20, y0 + h); x.lineTo(k + 20 + h, y0); x.lineTo(k + 32 + h, y0); x.lineTo(k + 32, y0 + h); x.fill();
+  }
+  x.restore();
+}
+function postmark(x, cx, cy, r, color, text) {
+  x.save(); x.strokeStyle = color; x.fillStyle = color; x.globalAlpha = .8; x.lineWidth = 3;
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 1.6; x.beginPath(); x.arc(cx, cy, r - 7, 0, Math.PI * 2); x.stroke();
+  x.font = `400 ${Math.round(r * .2)}px ${TYPE}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, cx, cy);
+  x.lineWidth = 3; x.lineCap = 'round';
+  for (let k = -1; k <= 1; k++) { x.beginPath(); const yy = cy + k * r * .45; x.moveTo(cx + r + 8, yy); for (let s = 0; s < 4; s++) x.quadraticCurveTo(cx + r + 18 + s * 22, yy + (s % 2 ? 8 : -8), cx + r + 30 + s * 22, yy); x.stroke(); }
+  x.restore();
+}
 
 function loadImg(src) {
   return new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -43,7 +67,8 @@ export async function corpseCanvas(steps) {
 
 // ---------- PNG ----------
 export async function albumToPngBlob(album) {
-  const Wd = 880, pad = 40, inner = Wd - pad * 2;
+  await fontsReady();
+  const Wd = 880, pad = 48, inner = Wd - pad * 2;
   const meas = document.createElement('canvas').getContext('2d');
   const blocks = [];
   if (album.kind === 'corpse') {
@@ -60,30 +85,33 @@ export async function albumToPngBlob(album) {
       imgs.forEach((im, i) => {
         const cx = pad + (i % cols) * (gw + 12), cy = y + 34 + Math.floor(i / cols) * (gh + 30);
         x.drawImage(im, cx, cy, gw, gh);
-        x.fillStyle = C.muted; x.font = `600 15px ${FONT}`;
-        const s = album.steps[i]; x.fillText(`${i + 1}. ${s && s.by ? s.by.name : ''}`, cx + 4, cy + gh + 20);
+        x.strokeStyle = C.ink; x.lineWidth = 2; x.strokeRect(cx, cy, gw, gh);
+        x.fillStyle = C.muted; x.font = `700 16px ${INK}`;
+        const s = album.steps[i]; x.fillText(`${i + 1}. ${s && s.by ? s.by.name : ''}${s && s.hold > 1 ? ` (${s.hold}×)` : ''}`, cx + 4, cy + gh + 22);
       });
     } });
   } else {
     for (const s of album.steps) {
       if (s.type === 'text') {
-        meas.font = `700 30px ${FONT}`;
+        meas.font = `700 30px ${INK}`;
         const lines = wrap(meas, stepText(s), inner - 48);
-        const bh = lines.length * 40 + 36;
-        blocks.push({ h: 40 + bh + 22, draw: (x, y) => {
+        const bh = lines.length * 44 + 30;
+        blocks.push({ h: 40 + bh + 26, draw: (x, y) => {
           who(x, pad, y, s.by);
-          rr(x, pad, y + 40, inner, bh, 22); x.fillStyle = C.card; x.fill();
-          x.fillStyle = s.text && s.text.trim() ? C.text : C.muted; x.font = `700 30px ${FONT}`;
-          lines.forEach((l, i) => x.fillText(l, pad + 24, y + 40 + 46 + i * 40));
+          rr(x, pad, y + 40, inner, bh, 16); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 3; x.strokeStyle = C.ink; x.stroke();
+          x.strokeStyle = C.line; x.lineWidth = 2;
+          lines.forEach((l, i) => { x.beginPath(); x.moveTo(pad + 18, y + 40 + 56 + i * 44); x.lineTo(pad + inner - 18, y + 40 + 56 + i * 44); x.stroke(); });
+          x.fillStyle = s.text && s.text.trim() ? C.blue : C.muted; x.font = `700 30px ${INK}`;
+          lines.forEach((l, i) => x.fillText(l, pad + 24, y + 40 + 48 + i * 44));
         } });
       } else if (s.img) {
         const im = await loadImg(s.img);
         const h = inner * 0.75;
-        blocks.push({ h: 40 + h + 22, draw: (x, y) => {
+        blocks.push({ h: 40 + h + 34, draw: (x, y) => {
           who(x, pad, y, s.by);
-          x.save(); rr(x, pad, y + 40, inner, h, 18); x.clip();
-          x.fillStyle = '#fff'; x.fillRect(pad, y + 40, inner, h);
-          if (im) x.drawImage(im, pad, y + 40, inner, h); x.restore();
+          x.fillStyle = '#fff'; x.fillRect(pad - 8, y + 32, inner + 16, h + 16);
+          x.lineWidth = 3; x.strokeStyle = C.ink; x.strokeRect(pad - 8, y + 32, inner + 16, h + 16);
+          if (im) x.drawImage(im, pad, y + 40, inner, h);
         } });
       }
     }
@@ -93,20 +121,23 @@ export async function albumToPngBlob(album) {
   const c = document.createElement('canvas'); c.width = Wd; c.height = Math.min(total, 30000);
   const x = c.getContext('2d');
   x.fillStyle = C.bg; x.fillRect(0, 0, Wd, c.height);
-  const g = x.createLinearGradient(0, 0, Wd, 0); g.addColorStop(0, C.violet); g.addColorStop(1, C.pink);
-  x.fillStyle = g; x.fillRect(0, 0, Wd, 8);
-  x.fillStyle = C.text; x.font = `800 40px ${DISPLAY}`; x.fillText('Krakelpost', pad, 66);
-  x.fillStyle = C.muted; x.font = `600 22px ${FONT}`; x.fillText(`Album von ${album.owner.avatar} ${album.owner.name}`, pad, 104);
+  airmail(x, 0, Wd, 12); airmail(x, c.height - 12, Wd, 12);
+  x.font = `400 58px ${HAND}`; x.lineJoin = 'round'; x.lineWidth = 7; x.strokeStyle = C.ink;
+  x.strokeText('Krakel', pad, 76); x.fillStyle = C.red; x.fillText('Krakel', pad, 76);
+  const kw = x.measureText('Krakel').width; x.strokeText('post', pad + kw + 2, 80); x.fillStyle = C.yellow; x.fillText('post', pad + kw + 2, 80);
+  x.fillStyle = C.ink; x.font = `400 18px ${TYPE}`; x.fillText(`ALBUM VON`, pad, 112);
+  x.font = `700 26px ${INK}`; x.fillText(`${album.owner.avatar} ${album.owner.name}`, pad + 118, 113);
+  postmark(x, Wd - 210, 66, 40, C.red, 'ZUGESTELLT');
   let y = headH;
   for (const b of blocks) { b.draw(x, y); y += b.h; }
-  x.fillStyle = C.muted; x.font = `600 16px ${FONT}`; x.fillText('Krakelpost · Zockbox · made by Oskar', pad, c.height - 24);
+  x.fillStyle = C.muted; x.font = `400 16px ${TYPE}`; x.fillText('Krakelpost · Zockbox · made by Oskar', pad, c.height - 30);
   return new Promise((res) => c.toBlob(res, 'image/png'));
 
   function who(x, px, py, by) {
-    x.font = `700 20px ${FONT}`; x.fillStyle = C.lime;
-    x.fillText(`${by ? by.avatar + ' ' + by.name : ''}`, px + 4, py + 26);
+    x.font = `700 22px ${INK}`; x.fillStyle = C.ink;
+    x.fillText(`${by ? by.avatar + ' ' + by.name : ''}`, px + 4, py + 24);
   }
-  function label(x, px, py, t) { x.font = `700 20px ${FONT}`; x.fillStyle = C.lime; x.fillText(t, px + 4, py + 24); }
+  function label(x, px, py, t) { x.font = `700 22px ${INK}`; x.fillStyle = C.ink; x.fillText(t, px + 4, py + 24); }
 }
 
 // ---------- GIF ----------
@@ -116,7 +147,7 @@ function palette() {
   const cols = [];
   const hex = (h) => parseInt(h.slice(1), 16);
   for (const p of PALETTE) cols.push(hex(p));
-  for (const p of [C.bg, C.card, C.violet, C.pink, C.lime, C.text, C.muted]) cols.push(hex(p));
+  for (const p of [C.bg, C.card, C.red, C.blue, C.yellow, C.ink, C.muted, C.line, '#2fae6a', '#ff78ad', '#9fd4ff']) cols.push(hex(p));
   const lv = [0, 51, 102, 153, 204, 255];
   for (const r of lv) for (const g of lv) for (const b of lv) cols.push((r << 16) | (g << 8) | b);
   let k = 0; while (cols.length < 256) { const v = Math.min(255, 8 + k * 17); cols.push((v << 16) | (v << 8) | v); k++; }
@@ -135,30 +166,36 @@ const GW = 640, GH = 480;
 async function frameFor(step, ctx) {
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, GW, GH);
   if (step.type === 'text') {
-    ctx.fillStyle = C.muted; ctx.font = `700 22px ${FONT}`; ctx.fillText(step.by ? `${step.by.avatar} ${step.by.name} schreibt:` : '', 36, 60);
-    ctx.font = `800 36px ${FONT}`; ctx.fillStyle = step.text && step.text.trim() ? C.text : C.muted;
-    const lines = wrap(ctx, stepText(step), GW - 72).slice(0, 7);
-    const y0 = GH / 2 - (lines.length * 46) / 2 + 30;
-    lines.forEach((l, i) => ctx.fillText(l, 36, y0 + i * 46));
-    ctx.font = `800 14px ${DISPLAY}`; ctx.fillStyle = 'rgba(124,92,255,.75)'; ctx.fillText('Krakelpost', GW - 120, GH - 18);
+    airmail(ctx, 0, GW, 10); airmail(ctx, GH - 10, GW, 10);
+    ctx.fillStyle = C.muted; ctx.font = `700 24px ${INK}`; ctx.fillText(step.by ? `${step.by.avatar} ${step.by.name} schreibt:` : '', 40, 66);
+    ctx.font = `700 38px ${INK}`;
+    const lines = wrap(ctx, stepText(step), GW - 80).slice(0, 7);
+    const y0 = GH / 2 - (lines.length * 52) / 2 + 34;
+    ctx.strokeStyle = C.line; ctx.lineWidth = 2;
+    lines.forEach((l, i) => { ctx.beginPath(); ctx.moveTo(36, y0 + i * 52 + 10); ctx.lineTo(GW - 36, y0 + i * 52 + 10); ctx.stroke(); });
+    ctx.fillStyle = step.text && step.text.trim() ? C.blue : C.muted;
+    lines.forEach((l, i) => ctx.fillText(l, 40, y0 + i * 52));
+    ctx.font = `400 22px ${HAND}`; ctx.fillStyle = C.red; ctx.fillText('Krakelpost', GW - 128, GH - 22);
   } else if (step.img) {
     const im = await loadImg(step.img);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, GW, GH);
     if (im) ctx.drawImage(im, 0, 0, GW, GH);
-    if (!step.noLabel) { ctx.font = `800 14px ${DISPLAY}`; ctx.fillStyle = 'rgba(124,92,255,.75)'; ctx.fillText('Krakelpost', GW - 120, GH - 18); }
+    if (!step.noLabel) { ctx.font = `400 22px ${HAND}`; ctx.fillStyle = C.red; ctx.fillText('Krakelpost', GW - 128, GH - 22); }
     if (step.by && !step.noLabel) {
-      ctx.font = `700 18px ${FONT}`;
-      const t = `${step.by.avatar} ${step.by.name}`; const w = ctx.measureText(t).width + 20;
-      ctx.fillStyle = 'rgba(15,14,26,.82)'; rr(ctx, 10, GH - 42, w, 32, 10); ctx.fill();
-      ctx.fillStyle = C.text; ctx.fillText(t, 20, GH - 20);
+      ctx.font = `700 19px ${INK}`;
+      const t = `${step.by.avatar} ${step.by.name}`; const w = ctx.measureText(t).width + 22;
+      ctx.fillStyle = C.ink; rr(ctx, 10, GH - 44, w, 34, 6); ctx.fill();
+      ctx.fillStyle = C.card; ctx.fillText(t, 21, GH - 20);
     }
   }
 }
 export async function albumToGifBlob(album, fps = 6, onProgress = () => {}) {
+  await fontsReady();
   const pal = palette();
   const c = document.createElement('canvas'); c.width = GW; c.height = GH;
   const ctx = c.getContext('2d', { willReadFrequently: true });
   let frames = [];
-  if (album.kind === 'anim') frames = album.steps.filter((s) => s.img).map((s) => ({ step: { ...s, noLabel: true }, delay: Math.max(2, Math.round(100 / fps)) }));
+  if (album.kind === 'anim') frames = album.steps.filter((s) => s.img).map((s) => ({ step: { ...s, noLabel: true }, delay: Math.max(2, Math.round((100 / fps) * (s.hold || 1))) }));
   else if (album.kind === 'corpse') {
     const cc = await corpseCanvas(album.steps);
     frames = [{ canvas: cc, delay: 400 }];

@@ -2,6 +2,7 @@
 // Multiplayer über ../../shared/net.js (PeerJS/WebRTC). Der Browser, der die Lobby erstellt, ist der Host.
 import { Room } from '../../shared/net.js';
 import { PACKS, buildPool } from './templates.js';
+import { LAYOUTS } from './layouts.js';
 import { renderMeme, redrawMeme, memeToPngBlob, memeToGifBlob, saveBlob, captionFontReady } from './memerender.js';
 import { sfx } from './sound.js';
 
@@ -41,7 +42,7 @@ const DEFAULT_SETTINGS = {
   packs: ['classic'], mode: 'normal', time: 90, rounds: 3, rerolls: 5, max: 10,
   family: false, autoStart: true, lateJoin: true, hostControl: false, dynVote: true, noBuddy: false, gifs: true,
 };
-const MAX_BOXES = 6;
+const MAX_BOXES = 8;
 const PENALTY = -500;
 const T = { intro: 3200, timeup: 2200, next: 1700, collect: 2600, gameover: 2600 };
 const BAD_WORDS = ['scheiß', 'scheiss', 'scheis', 'fick', 'fotze', 'hurensohn', 'hure', 'wichser', 'arschloch', 'schlampe', 'nutte', 'missgeburt', 'spast', 'bastard',
@@ -198,18 +199,19 @@ function cleanName(n) {
   return s;
 }
 function hostAddPlayer(id, hello) {
-  H.players[id] = { name: cleanName(hello.name), avatar: AVATARS.includes(hello.avatar) ? hello.avatar : pick(AVATARS), score: 0 };
+  H.players[id] = { name: cleanName(hello.name), avatar: AVATARS.includes(hello.avatar) ? hello.avatar : pick(AVATARS), score: 0, sid: String(hello.sid || '').slice(0, 40) };
   H.order.push(id);
   if (H.phase === 'create' && !H.assign[id]) H.assign[id] = { tpl: H.sameTpl || freshTemplate(), rerolls: H.settings.mode === 'same' ? 0 : H.settings.rerolls };
 }
 const count = () => H.order.length;
-const eligibleVoters = (author) => H.order.filter((id) => id !== author);
+const online = () => H.order.filter((id) => !H.players[id].off);
+const eligibleVoters = (author) => online().filter((id) => id !== author);
 
 function publicState() {
   const st = {
     t: 'state', phase: H.phase, hostId: room.myId, code: room.code, isPublic: room.isPublic,
     settings: H.settings, round: H.round, topic: H.topic,
-    players: H.order.map((id) => ({ id, ...H.players[id] })),
+    players: H.order.map((id) => { const p = H.players[id]; return { id, name: p.name, avatar: p.avatar, score: p.score, off: !!p.off }; }),
     endsIn: H.endsAt ? Math.max(0, H.endsAt - Date.now()) : 0, totalMs: H.totalMs,
     autoIn: H.autoAt ? Math.max(0, H.autoAt - Date.now()) : 0,
   };
@@ -226,7 +228,7 @@ function publicState() {
   if (H.phase === 'final') st.gallery = H.gallery.slice().sort((a, b) => b.pts - a.pts);
   return st;
 }
-function sync() { if (room && room.isHost) room.broadcast(publicState()); }
+function sync() { if (room && room.isHost) { room.broadcast(publicState()); saveHostSoon(); } }
 function sysChat(text) { room.broadcast({ t: 'chat', sys: true, text }); }
 function setTimer(ms) { H.totalMs = ms; H.endsAt = ms ? Date.now() + ms : 0; }
 function go(phase, ms) { H.phase = phase; setTimer(ms); sync(); }
@@ -243,7 +245,7 @@ function startCreate() {
   H.subs = {}; H.drafts = {}; H.assign = {}; H.buddies = {}; H.votes = {};
   H.topic = H.settings.mode === 'topics' ? pick(TOPICS) : null;
   H.sameTpl = H.settings.mode === 'same' ? freshTemplate() : null;
-  H.roundPlayers = new Set(H.order);
+  H.roundPlayers = new Set(online());
   for (const id of H.order) H.assign[id] = { tpl: H.sameTpl || freshTemplate(), rerolls: H.settings.mode === 'same' ? 0 : H.settings.rerolls };
   go('create', H.settings.time * 1000);
 }
@@ -358,10 +360,15 @@ function cleanBoxes(boxes) {
   return boxes.slice(0, MAX_BOXES).map((b) => {
     let text = String((b && b.text) || '').slice(0, 140);
     if (H.settings.family) text = cleanText(text);
-    return { text, x: num(b.x, 4, -10, 100), y: num(b.y, 4, -10, 100), w: num(b.w, 92, 8, 120), h: num(b.h, 20, 5, 120), c: b.c === 'b' ? 'b' : 'w' };
+    const o = { text, x: num(b.x, 4, -10, 100), y: num(b.y, 4, -10, 100), w: num(b.w, 92, 5, 120), h: num(b.h, 20, 3, 120), c: b.c === 'b' ? 'b' : 'w' };
+    const r = num(b.r, 0, -180, 180); if (r) o.r = Math.round(r);
+    if (b.v === 't' || b.v === 'b') o.v = b.v;
+    return o;
   });
 }
-function kickNeed() { if (!H.kick) return 0; const others = H.order.filter((x) => x !== H.kick.target).length; return Math.floor(others / 2) + 1; }
+function kickNeed() { if (!H.kick) return 0; const others = online().filter((x) => x !== H.kick.target).length; return Math.floor(others / 2) + 1; }
+// alle, die gerade verbunden sind (und ein Meme bekommen haben), haben eingereicht
+function allSubmitted() { const on = online().filter((id) => H.assign[id]); return on.length > 0 && on.every((id) => H.subs[id]); }
 function doKick(id, why) {
   if (!H.players[id] || id === room.myId) return;
   room.sendTo(id, { t: 'kicked', why });
@@ -386,7 +393,7 @@ function hostHandle(from, msg) {
       break;
     }
     case 'start':
-      if (!isHostMsg || H.phase !== 'lobby' || count() < 2) return;
+      if (!isHostMsg || H.phase !== 'lobby' || online().length < 2) return;
       startGame();
       break;
     case 'again':
@@ -420,7 +427,7 @@ function hostHandle(from, msg) {
     case 'submit':
       if (H.phase !== 'create' || !a) return;
       H.subs[from] = { tpl: a.tpl, boxes: cleanBoxes(msg.boxes) };
-      if (H.order.every((id) => H.subs[id])) { setTimer(0); endCreate(false); }
+      if (allSubmitted()) { setTimer(0); endCreate(false); }
       else sync();
       break;
     case 'unsubmit':
@@ -477,38 +484,168 @@ function checkKick() {
   if (H.kick && H.kick.yes.size >= kickNeed()) { const id = H.kick.target; H.kick = null; doKick(id, 'vote'); }
 }
 function hostRemove(id, kicked) {
-  if (!H.players[id]) return;
+  if (!H || !H.players[id]) return;
   const name = H.players[id].name;
   delete H.players[id];
   H.order = H.order.filter((x) => x !== id);
-  delete H.assign[id]; delete H.subs[id]; delete H.drafts[id];
+  delete H.assign[id]; delete H.subs[id]; delete H.drafts[id]; delete lastSeen[id];
   if (H.kick && H.kick.target === id) H.kick = null;
+  if (H.kick) H.kick.yes.delete(id);
   sysChat(kicked ? `${name} wurde rausgeworfen` : `${name} hat die Lobby verlassen`);
-  if (H.phase === 'create' && H.order.length && H.order.every((x) => H.subs[x])) { setTimer(0); endCreate(false); return; }
-  if (H.phase === 'vote' && H.settings.dynVote && !H.settings.hostControl) {
-    const e = H.entries[H.voteIdx];
-    if (e && eligibleVoters(e.author).every((x) => x in (H.votes[H.voteIdx] || {}))) H.endsAt = Math.min(H.endsAt || Infinity, Date.now() + 1200);
-  }
+  if (H.phase === 'create' && allSubmitted()) { setTimer(0); endCreate(false); return; }
+  checkVoteDone();
+  checkKick();
   sync();
 }
-function setupHost() {
+// --- Verbindungsabbrüche: Spieler behalten ihren Platz, bis sie wiederkommen ---
+const GRACE_MS = 60000;      // so lange wartet der Host auf einen weggebrochenen Spieler
+const SILENT_MS = 12000;     // keine Nachricht so lange = Verbindung tot
+const lastSeen = {};
+function markOffline(id) {
+  if (!H || !room) return;
+  const p = H.players[id];
+  if (!p || p.off || id === room.myId) return;
+  p.off = Date.now();
+  sysChat(`📶 ${p.name} hat die Verbindung verloren – wartet auf Rückkehr …`);
+  if (H.phase === 'create' && allSubmitted()) { setTimer(0); endCreate(false); return; }
+  checkVoteDone();
+  checkKick();
+  sync();
+}
+function checkVoteDone() {
+  if (H.phase !== 'vote' || !H.settings.dynVote || H.settings.hostControl) return;
+  const e = H.entries[H.voteIdx];
+  if (e && eligibleVoters(e.author).every((x) => x in (H.votes[H.voteIdx] || {}))) H.endsAt = Math.min(H.endsAt || Infinity, Date.now() + 1200);
+}
+// alle Spuren einer alten Peer-ID auf die neue umschreiben (Wiederverbinden)
+function remapId(from, to) {
+  const sw = (x) => (x === from ? to : x);
+  const moveKey = (o) => { if (o && from in o) { o[to] = o[from]; delete o[from]; } };
+  moveKey(H.players); moveKey(H.assign); moveKey(H.subs); moveKey(H.drafts); moveKey(lastSeen);
+  H.order = H.order.map(sw);
+  H.roundPlayers = new Set([...H.roundPlayers].map(sw));
+  for (const e of H.entries) e.author = sw(e.author);
+  for (const k of Object.keys(H.votes)) moveKey(H.votes[k]);
+  const bud = {}; for (const [g, t] of Object.entries(H.buddies)) bud[sw(g)] = sw(t); H.buddies = bud;
+  if (H.kick) { H.kick.target = sw(H.kick.target); H.kick.yes = new Set([...H.kick.yes].map(sw)); }
+  if (H.results) { moveKey(H.results.gains); for (const m of H.results.memes) m.author = sw(m.author); }
+}
+function hostJoin(id, hello) {
+  lastSeen[id] = Date.now();
+  const sid = String((hello && hello.sid) || '');
+  const old = sid && H.order.find((x) => x !== id && H.players[x] && H.players[x].sid === sid);
+  if (old) {
+    // derselbe Spieler kommt zurück (neu geladen, Netz weg, …): Platz, Punkte, Meme übernehmen
+    const wasOff = H.players[old].off;
+    if (room.conns.has(old)) { room.sendTo(old, { t: 'kicked', why: 'dup' }); setTimeout(() => room.kick(old), 200); }
+    remapId(old, id);
+    lastSeen[id] = Date.now();
+    const p = H.players[id];
+    delete p.off;
+    if (hello.name) p.name = cleanName(hello.name);
+    if (AVATARS.includes(hello.avatar)) p.avatar = hello.avatar;
+    sysChat(wasOff ? `✅ ${p.name} ist wieder da` : `🔁 ${p.name} hat sich neu verbunden`);
+    sync();
+    return;
+  }
+  if (count() >= H.settings.max) { room.sendTo(id, { t: 'full' }); setTimeout(() => room.kick(id), 300); return; }
+  if (H.phase !== 'lobby' && !H.settings.lateJoin) { room.sendTo(id, { t: 'deny', text: 'Das Spiel läuft schon – Beitreten ist gerade nicht erlaubt.' }); setTimeout(() => room.kick(id), 300); return; }
+  hostAddPlayer(id, hello);
+  sysChat(`${H.players[id].avatar} ${H.players[id].name} ist beigetreten`);
+  sync();
+}
+function hostWatchdog() {
+  if (!H || !room || !room.isHost) return;
+  const now = Date.now();
+  for (const id of H.order.slice()) {
+    if (id === room.myId) continue;
+    const p = H.players[id];
+    if (!p) continue;
+    if (p.off) { if (now - p.off > GRACE_MS) hostRemove(id); continue; }
+    if (!room.conns.has(id)) { markOffline(id); continue; }
+    if (now - (lastSeen[id] || now) > SILENT_MS) { room.kick(id); markOffline(id); }
+  }
+}
+
+// --- Host-Zustand im Tab sichern: lädt der Host versehentlich neu, geht die Lobby weiter ---
+const HOST_KEY = 'mm_host';
+let saveTimer = null;
+function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+function ssSet(k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} }
+function saveHostNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  if (!H || !room || !room.isHost) return;
+  try {
+    const h = { ...H, used: [...H.used], roundPlayers: [...H.roundPlayers], kick: null };
+    ssSet(HOST_KEY, JSON.stringify({ v: 1, code: room.code, isPublic: room.isPublic, t: Date.now(), H: h }));
+  } catch (e) {}
+}
+function saveHostSoon() { if (!saveTimer) saveTimer = setTimeout(saveHostNow, 800); }
+function loadHostSave() {
+  try {
+    const x = JSON.parse(ssGet(HOST_KEY) || 'null');
+    if (!x || x.v !== 1 || Date.now() - x.t > 3 * 60000) return null;
+    return x;
+  } catch (e) { return null; }
+}
+window.addEventListener('pagehide', () => saveHostNow());
+
+function setupHost(restored) {
   H = newHostState();
+  if (restored) {
+    Object.assign(H, restored, { used: new Set(restored.used || []), roundPlayers: new Set(restored.roundPlayers || []), kick: null });
+    const now = Date.now();
+    for (const id of H.order) { if (id !== room.myId && H.players[id]) H.players[id].off = H.players[id].off || now; }
+    // Wer gerade schreibt, bekommt nach dem Neuladen ein paar Sekunden extra
+    if (H.endsAt && H.phase === 'create') H.endsAt = Math.max(H.endsAt, now + 15000);
+    else if (H.endsAt) H.endsAt = Math.max(H.endsAt, now + 3000);
+    if (H.autoAt) H.autoAt = 0;
+  }
   room.getInfo = () => ({
     phase: H.phase, players: count(), max: H.settings.max, mode: H.settings.mode, pack: H.settings.packs.join('+'),
     host: H.players[room.myId] ? H.players[room.myId].name : '?', late: H.settings.lateJoin,
   });
-  room.onClientJoin = (id, hello) => {
-    if (count() >= H.settings.max) { room.sendTo(id, { t: 'full' }); setTimeout(() => room.kick(id), 300); return; }
-    if (H.phase !== 'lobby' && !H.settings.lateJoin) { room.sendTo(id, { t: 'deny', text: 'Das Spiel läuft schon – Beitreten ist gerade nicht erlaubt.' }); setTimeout(() => room.kick(id), 300); return; }
-    hostAddPlayer(id, hello);
-    sysChat(`${H.players[id].avatar} ${H.players[id].name} ist beigetreten`);
-    sync();
+  room.onClientJoin = (id, hello) => hostJoin(id, hello || {});
+  room.onClientLeave = (id) => markOffline(id);
+  room.onClientMessage = (from, msg) => {
+    if (!msg || typeof msg !== 'object') return;
+    lastSeen[from] = Date.now();
+    if (msg.t === 'ping') return;
+    if (msg.t === 'bye') { if (from !== room.myId) { hostRemove(from); room.kick(from); } return; }
+    hostHandle(from, msg);
   };
-  room.onClientLeave = (id) => hostRemove(id);
-  room.onClientMessage = (from, msg) => { if (msg && typeof msg === 'object') hostHandle(from, msg); };
-  hostAddPlayer(room.myId, readProfile());
-  setInterval(hostTick, 200);
+  if (!restored || !H.players[room.myId]) hostAddPlayer(room.myId, readProfile());
+  else { const p = H.players[room.myId]; delete p.off; }
+  clearInterval(hostTimer);
+  hostTimer = setInterval(() => { try { hostTick(); } catch (e) { console.error('hostTick', e); } }, 200);
+  clearInterval(hbTimer);
+  hbTimer = setInterval(() => { if (room && room.isHost) { room.broadcast({ t: 'hb' }); hostWatchdog(); } }, 3000);
   sync();
+  if (restored) sysChat('🔄 Der Spielleiter war kurz weg – weiter geht’s!');
+}
+let hostTimer = null, hbTimer = null;
+// Eigene Peer-ID (Lobby-Code) erneut belegen. Der Vermittlungsserver gibt die alte ID oft erst
+// nach ein paar Sekunden frei, darum mehrere Versuche.
+async function claimHostId(r, code, isPublic) {
+  const id = isPublic ? r._publicId(+String(code).replace(/\D/g, '')) : r._privateId(code);
+  for (let i = 0; i < 10; i++) {
+    try {
+      const peer = await new Promise((res, rej) => {
+        const p = new Peer(id, { debug: 0 });
+        let done = false;
+        p.on('open', () => { done = true; res(p); });
+        p.on('error', (e) => { if (!done) { done = true; try { p.destroy(); } catch (x) {} rej(e); } });
+        setTimeout(() => { if (!done) { done = true; try { p.destroy(); } catch (x) {} rej(new Error('timeout')); } }, 10000);
+      });
+      r.code = code; r.isPublic = !!isPublic;
+      await r._becomeHost(peer);
+      return true;
+    } catch (e) {
+      if (e && e.type && e.type !== 'unavailable-id') throw e;
+      await new Promise((res) => setTimeout(res, 2500));
+    }
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -528,22 +665,47 @@ let myRoundKey = '';
 
 function onHostMessage(msg) {
   if (!msg || typeof msg !== 'object') return;
+  lastHostMsg = Date.now();
+  if (msg.t === 'hb') return;
   if (msg.t === 'state') {
+    const first = !S || needResync;
     S = msg; localDeadline = msg.endsIn ? Date.now() + msg.endsIn : 0; localAuto = msg.autoIn ? Date.now() + msg.autoIn : 0;
     render();
+    if (first && needResync) {
+      needResync = false;
+      // nach dem Wiederverbinden den aktuellen Entwurf sofort nachschicken
+      if (S.phase === 'create' && editor.round === S.round && editor.boxes.some((b) => b.text)) room.send({ t: 'draft', boxes: editor.boxes });
+    }
+    saveClientInfo();
   } else if (msg.t === 'chat') addChat(msg);
+  else if (msg.t === 'closed') { toast('Der Spielleiter hat die Lobby geschlossen 👋', { err: true, ms: 4500 }); resetToStart(true); }
   else if (msg.t === 'full') { toast('Die Lobby ist voll 😕', { err: true }); resetToStart(); }
   else if (msg.t === 'deny') { toast(msg.text, { err: true, ms: 4500 }); resetToStart(); }
-  else if (msg.t === 'kicked') { toast(msg.why === 'vote' ? 'Du wurdest per Abstimmung rausgeworfen' : 'Du wurdest aus der Lobby entfernt', { err: true, ms: 4500 }); resetToStart(); }
+  else if (msg.t === 'kicked') {
+    toast(msg.why === 'vote' ? 'Du wurdest per Abstimmung rausgeworfen' : msg.why === 'dup' ? 'Du bist in einem anderen Tab mit dieser Lobby verbunden' : 'Du wurdest aus der Lobby entfernt', { err: true, ms: 4500 });
+    resetToStart(true);
+  }
 }
 const isHost = () => room && room.isHost;
 const myId = () => room && room.myId;
 const playerById = (id) => (S && S.players.find((p) => p.id === id)) || null;
 
-function resetToStart() {
+function resetToStart(silent) {
   const old = room; room = null;
-  if (old) old.leave();
+  reconnecting = null; needResync = false;
+  if (reconnectToast) { reconnectToast.close(); reconnectToast = null; }
+  ssSet(CLIENT_KEY, null);
+  if (old) {
+    // dem Host Bescheid sagen, damit er nicht auf uns wartet
+    try {
+      if (old.isHost) { ssSet(HOST_KEY, null); clearInterval(hostTimer); clearInterval(hbTimer); old.broadcast({ t: 'closed' }); }
+      else if (!silent) old.send({ t: 'bye' });
+    } catch (e) {}
+    old.onClientJoin = old.onClientLeave = old.onClientMessage = old.onHostLost = old.onHostMessage = () => {};
+    setTimeout(() => old.leave(), 250);
+  }
   S = null; H = null; lastPhase = null; localLobby = false; codeShown = false;
+  clearInterval(hostTimer); clearInterval(hbTimer);
   editor.tplId = null; editor.round = -1;
   $('chatLog').innerHTML = ''; unread = 0; updateBadge(); $('chat').classList.add('hidden');
   $('votekick').classList.add('hidden');
@@ -644,7 +806,7 @@ function renderLobby() {
   const shown = S.players.slice(0, cap);
   let html = shown.map((p) => {
     const mine = p.id === myId();
-    return `<button class="pl ${mine ? 'me' : ''}" data-pid="${esc(p.id)}" type="button" title="${esc(p.name)}">
+    return `<button class="pl ${mine ? 'me' : ''} ${p.off ? 'off' : ''}" data-pid="${esc(p.id)}" type="button" title="${esc(p.name)}${p.off ? ' (Verbindung weg)' : ''}">
       ${p.id === S.hostId ? '<span class="crown">👑</span>' : ''}${avHtml(p)}${mine ? '' : ''}
       <span class="nm">${esc(p.name)}</span>${p.id === S.hostId ? '<span class="role">SPIELLEITER</span>' : ''}</button>`;
   }).join('');
@@ -750,11 +912,46 @@ function renderStage() {
 
 // ERSTELLEN ------------------------------------------------------------------
 let draftTimer = null;
-function sendDraft() { clearTimeout(draftTimer); draftTimer = setTimeout(() => room && room.send({ t: 'draft', boxes: editor.boxes }), 500); }
+function flushDraft() {
+  clearTimeout(draftTimer); draftTimer = null;
+  if (room && S && S.phase === 'create') room.send({ t: 'draft', boxes: editor.boxes });
+  keepDraftLocal();
+}
+// Entwurf auch im Tab merken: nach Neuladen/Wiederverbinden ist der Text noch da
+function keepDraftLocal() {
+  if (!S || !room) return;
+  ssSet('mm_draft', JSON.stringify({ code: room.code, round: S.round, tpl: editor.tplId, boxes: editor.boxes }));
+}
+function localDraftFor(tplId) {
+  try {
+    const d = JSON.parse(ssGet('mm_draft') || 'null');
+    if (d && room && d.code === room.code && d.round === S.round && d.tpl === tplId && Array.isArray(d.boxes)) return d.boxes;
+  } catch (e) {}
+  return null;
+}
+function sendDraft() {
+  // kurz vor Schluss sofort senden, damit beim Zeitende nichts verloren geht
+  if (localDeadline && localDeadline - Date.now() < 3000) { flushDraft(); return; }
+  clearTimeout(draftTimer); draftTimer = setTimeout(flushDraft, 400);
+  keepDraftLocal();
+}
+function layoutBox(a) {
+  const [x, y, w, h, flags = ''] = a;
+  const b = { text: '', x, y, w, h, c: 'w' };
+  for (const f of String(flags).split(/\s+/)) {
+    if (f === 'b') b.c = 'b';
+    else if (f === 'vt') b.v = 't';
+    else if (f === 'vb') b.v = 'b';
+    else if (/^r-?\d+$/.test(f)) b.r = +f.slice(1);
+  }
+  return b;
+}
 function defaultBoxes(tpl) {
+  const lay = LAYOUTS[tpl.id];
+  if (lay && lay.length) return lay.slice(0, MAX_BOXES).map(layoutBox);
   const n = Math.max(1, Math.min(tpl.b || 2, MAX_BOXES));
-  if (n === 1) return [{ text: '', x: 4, y: 3, w: 92, h: 24, c: 'w' }];
-  if (n === 2) return [{ text: '', x: 4, y: 3, w: 92, h: 22, c: 'w' }, { text: '', x: 4, y: 75, w: 92, h: 22, c: 'w' }];
+  if (n === 1) return [{ text: '', x: 3, y: 2, w: 94, h: 22, c: 'w', v: 't' }];
+  if (n === 2) return [{ text: '', x: 3, y: 2, w: 94, h: 22, c: 'w', v: 't' }, { text: '', x: 3, y: 76, w: 94, h: 22, c: 'w', v: 'b' }];
   const h = 96 / n;
   return Array.from({ length: n }, (_, i) => ({ text: '', x: 6, y: Math.round((2 + i * h) * 10) / 10, w: 88, h: Math.round((h - 2) * 10) / 10, c: 'w' }));
 }
@@ -769,15 +966,17 @@ function renderCreate() {
     $('stageTitle').textContent = 'Du hast dein Meisterwerk eingereicht';
     $('stageSub').textContent = 'Warten wir auf die anderen …';
     $('stageEditBtn').classList.remove('hidden');
-    $('stageNote').textContent = `${(S.submitted || []).length}/${S.players.length} fertig`;
+    $('stageNote').textContent = `${(S.submitted || []).length}/${S.players.filter((p) => !p.off).length} fertig`;
     return;
   }
   const fresh = a.tpl.id !== editor.tplId || S.round !== editor.round;
   show('create');
   if (fresh) {
     const old = editor.round === S.round ? editor.boxes.map((b) => b.text) : [];
+    const saved = localDraftFor(a.tpl.id);
     editor.tpl = a.tpl; editor.tplId = a.tpl.id; editor.round = S.round; editor.sel = 0;
-    editor.boxes = defaultBoxes(a.tpl);
+    editor.boxes = saved ? saved.map((b) => ({ ...b, text: String(b.text || '') })) : defaultBoxes(a.tpl);
+    if (saved) old.length = 0;
     old.forEach((t, i) => { if (!t) return; if (editor.boxes[i]) editor.boxes[i].text = t; else if (editor.boxes.length < MAX_BOXES) editor.boxes.push({ text: t, x: 6, y: 40, w: 88, h: 18, c: 'w' }); });
     $('motivation').textContent = pick(MOTIVATION);
     drawEditor(); buildInputs();
@@ -809,7 +1008,7 @@ function drawBoxOverlays() {
     el.appendChild(d);
   });
 }
-function placeBox(d, b) { d.style.left = b.x + '%'; d.style.top = b.y + '%'; d.style.width = b.w + '%'; d.style.height = b.h + '%'; }
+function placeBox(d, b) { d.style.left = b.x + '%'; d.style.top = b.y + '%'; d.style.width = b.w + '%'; d.style.height = b.h + '%'; d.style.transform = b.r ? `rotate(${b.r}deg)` : ''; }
 function selectBox(i, focus) {
   editor.sel = i;
   editor.el.querySelectorAll('.bx').forEach((x) => x.classList.toggle('sel', +x.dataset.i === i));
@@ -839,11 +1038,14 @@ function attachDrag(d, i) {
   const end = () => {
     if (!st) return;
     const tapped = !st.moved;
+    d._dragged = !tapped;
     st = null;
     if (tapped) selectBox(i, true); else sendDraft();
   };
   d.addEventListener('pointerup', end);
   d.addEventListener('pointercancel', end);
+  // iOS öffnet die Tastatur zuverlässig nur aus einem click heraus: dort nochmal fokussieren
+  d.addEventListener('click', () => { if (editor.sel === i && document.activeElement !== $('boxInputs').querySelector(`.bi-row[data-i="${i}"] input`) && !d._dragged) selectBox(i, true); });
 }
 function buildInputs() {
   const wrap = $('boxInputs');
@@ -852,7 +1054,8 @@ function buildInputs() {
     const row = document.createElement('div');
     row.className = 'bi-row' + (i === editor.sel ? ' sel' : '');
     row.dataset.i = i;
-    row.innerHTML = `<input type="text" maxlength="140" placeholder="Text ${i + 1} …" autocomplete="off" enterkeyhint="next">
+    const last = i === editor.boxes.length - 1;
+    row.innerHTML = `<input type="text" maxlength="140" placeholder="Text ${i + 1} …" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="${last ? 'done' : 'next'}" aria-label="Text ${i + 1}">
       <button class="bi-tool ${b.c === 'b' ? 'col-b' : 'col-w'}" data-a="col" type="button" title="Textfarbe" aria-label="Textfarbe wechseln"></button>
       ${editor.boxes.length > 1 ? '<button class="bi-tool" data-a="del" type="button" title="Textfeld löschen" aria-label="Textfeld löschen">🗑</button>' : ''}`;
     const inp = row.querySelector('input');
@@ -865,11 +1068,12 @@ function buildInputs() {
       sendDraft();
     });
     inp.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
+      if (e.key !== 'Enter' || e.isComposing) return;
       e.preventDefault();
-      const next = wrap.querySelector(`.bi-row[data-i="${i + 1}"] input`);
-      if (next) next.focus(); else inp.blur();
+      // Enter springt ins nächste Feld, im letzten Feld schließt es die Tastatur
+      if (i + 1 < editor.boxes.length) selectBox(i + 1, true); else { inp.blur(); flushDraft(); }
     });
+    inp.addEventListener('blur', () => flushDraft());
     row.querySelector('[data-a=col]').onclick = () => { b.c = b.c === 'b' ? 'w' : 'b'; redrawMeme(editor.el, editor.boxes); buildInputs(); sendDraft(); };
     const del = row.querySelector('[data-a=del]');
     if (del) del.onclick = () => { editor.boxes.splice(i, 1); editor.sel = Math.max(0, Math.min(editor.sel, editor.boxes.length - 1)); drawEditor(); buildInputs(); sendDraft(); };
@@ -877,6 +1081,38 @@ function buildInputs() {
   });
   $('addBoxBtn').disabled = editor.boxes.length >= MAX_BOXES;
 }
+// --- Tipp-Modus am Handy: Meme + aktives Textfeld passen über die Tastatur ------
+const touchUI = matchMedia('(hover: none)');
+let typingRaf = 0;
+function updateTyping() {
+  const a = document.activeElement;
+  const on = touchUI.matches && curScreen === 'create' && !!(a && a.closest && a.closest('#boxInputs')) && window.innerWidth <= 760;
+  document.body.classList.toggle('mm-typing', on);
+  if (!on) return;
+  const vv = window.visualViewport;
+  document.body.style.setProperty('--vvh', Math.round(vv ? vv.height : window.innerHeight) + 'px');
+  document.body.style.setProperty('--rows', String(editor.boxes.length || 1));
+  cancelAnimationFrame(typingRaf);
+  typingRaf = requestAnimationFrame(() => {
+    const box = document.querySelector('#scr-create .meme-panel');
+    if (!box) return;
+    const top = box.getBoundingClientRect().top - (vv ? vv.offsetTop : 0);
+    const want = document.getElementById('hdr').getBoundingClientRect().height + 6;
+    if (Math.abs(top - want) > 3) window.scrollBy(0, top - want);
+  });
+}
+document.addEventListener('focusin', updateTyping);
+document.addEventListener('focusout', () => setTimeout(updateTyping, 250));
+// Knöpfe im Tipp-Modus nehmen der Eingabe nicht den Fokus weg (sonst springt das Layout
+// zwischen Drücken und Loslassen und der Tipp geht ins Leere)
+document.addEventListener('mousedown', (e) => {
+  if (document.body.classList.contains('mm-typing') && e.target.closest && e.target.closest('#scr-create button')) e.preventDefault();
+}, true);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateTyping);
+}
+window.addEventListener('resize', updateTyping);
+
 $('addBoxBtn').onclick = () => {
   if (editor.boxes.length >= MAX_BOXES) return;
   editor.boxes.push({ text: '', x: 10, y: 40, w: 80, h: 18, c: 'w' });
@@ -887,6 +1123,8 @@ $('rerollBtn').onclick = () => { sfx.play('whoosh'); room.send({ t: 'reroll' });
 $('submitBtn').onclick = () => {
   if (!editor.boxes.some((b) => b.text.trim())) { toast('Schreib erst einen Text 😉', { err: true }); return; }
   sfx.play('submit');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  clearTimeout(draftTimer); keepDraftLocal();
   room.send({ t: 'submit', boxes: editor.boxes });
   toast('Dein Meisterwerk wurde eingereicht!');
 };
@@ -989,7 +1227,7 @@ function renderBoard(box, R) {
     const open = mine || openRows.has(p.id);
     const line = (label, v) => (v ? `<div><span>${label}</span><span class="v ${v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${v}</span></div>` : '');
     const det = g ? line('Meme-Punkte', g.meme) + line('Buddy-Bonus', g.buddyBonus) + line('Buddy-Anteil', g.share) + line('Kein-Meme-Abzug', g.penalty) : '';
-    return `<button class="srow ${mine ? 'me' : ''} ${open && det ? 'open' : ''}" data-row="${esc(p.id)}" type="button">
+    return `<button class="srow ${mine ? 'me' : ''} ${open && det ? 'open' : ''} ${p.off ? 'off' : ''}" data-row="${esc(p.id)}" type="button">
       <div class="sr-main"><span class="pos ${i === 0 ? '' : i === 1 ? 'p2' : i === 2 ? 'p3' : 'px'}">${i + 1}.</span>${avHtml(p)}<span class="nm">${esc(p.name)}</span>
       <span class="pts ${p.score < 0 ? 'neg' : ''}">${p.score}</span></div><div class="sr-det">${det}</div></button>`;
   }).join('');
@@ -1165,9 +1403,78 @@ function newRoom() {
   if (typeof Peer === 'undefined') { toast('Verbindungsbibliothek konnte nicht geladen werden. Ist das Netz blockiert?', { err: true, ms: 5000 }); return null; }
   const r = new Room(GAME_ID);
   r.onHostMessage = (msg) => { if (room === r) onHostMessage(msg); };
-  r.onHostLost = () => { if (room === r) { toast('Verbindung zum Spielleiter verloren 😢', { err: true, ms: 4000 }); resetToStart(); } };
+  r.onHostLost = () => { if (room === r) startReconnect(); };
   return r;
 }
+// --- Wiederverbinden (Client) -------------------------------------------------
+const CLIENT_KEY = 'mm_client';
+const SID = (() => {
+  let v = ssGet('mm_sid');
+  if (!v) { v = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); ssSet('mm_sid', v); }
+  return v;
+})();
+let lastHostMsg = 0;
+let reconnecting = null;
+let reconnectToast = null;
+let needResync = false;
+const hello = () => ({ ...readProfile(), sid: SID });
+function saveClientInfo() {
+  if (!room || room.isHost || !room.code) return;
+  ssSet(CLIENT_KEY, JSON.stringify({ code: room.code, isPublic: room.isPublic, t: Date.now() }));
+}
+async function joinTarget(r, code, isPublic) {
+  if (isPublic) return r.joinPublic(+String(code).replace(/\D/g, ''), hello());
+  return r.joinPrivate(code, hello());
+}
+function startReconnect() {
+  if (reconnecting || !room || room.isHost) return;
+  const old = room;
+  const code = old.code, isPublic = old.isPublic;
+  old.onHostLost = () => {}; old.onHostMessage = () => {};
+  try { old.leave(); } catch (e) {}
+  const job = { cancelled: false };
+  reconnecting = job;
+  reconnectToast = toast('📶 Verbindung weg – verbinde neu …', { err: true, ms: 600000 });
+  (async () => {
+    const waits = [300, 1500, 2500, 4000, 5000, 6000, 8000, 10000, 12000];
+    for (let i = 0; i < waits.length; i++) {
+      await new Promise((r) => setTimeout(r, waits[i]));
+      if (job.cancelled || reconnecting !== job) return;
+      reconnectToast && reconnectToast.set(`📶 Verbindung weg – verbinde neu … (Versuch ${i + 1})`);
+      const r = newRoom(); if (!r) break;
+      let ok = false;
+      try { ok = await joinTarget(r, code, isPublic); } catch (e) { ok = false; }
+      if (job.cancelled || reconnecting !== job) { if (ok) r.leave(); return; }
+      if (ok) {
+        room = r; reconnecting = null; needResync = true; lastHostMsg = Date.now();
+        if (reconnectToast) { reconnectToast.close(); reconnectToast = null; }
+        toast('Wieder verbunden! 🎉');
+        return;
+      }
+      try { r.leave(); } catch (e) {}
+    }
+    if (reconnecting !== job) return;
+    reconnecting = null;
+    if (reconnectToast) { reconnectToast.close(); reconnectToast = null; }
+    toast('Verbindung zum Spielleiter verloren 😢', { err: true, ms: 5000 });
+    room = old; // damit resetToStart sauber aufräumt
+    resetToStart(true);
+  })();
+}
+// Herzschlag: Client meldet sich alle 3 s beim Host; kommt 10 s nichts vom Host, neu verbinden
+setInterval(() => {
+  if (!room || room.isHost || reconnecting || !S) return;
+  room.send({ t: 'ping' });
+  if (lastHostMsg && Date.now() - lastHostMsg > 10000) startReconnect();
+}, 3000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !room || room.isHost || reconnecting || !S) return;
+  room.send({ t: 'ping' });
+  const before = lastHostMsg;
+  // nach dem Zurückkehren in den Tab: kommt nicht bald etwas vom Host, ist die Leitung tot
+  setTimeout(() => { if (room && !room.isHost && !reconnecting && lastHostMsg === before && Date.now() - lastHostMsg > 4500) startReconnect(); }, 4000);
+});
+
 async function busy(btn, fn) {
   if (btn.dataset.busy) return;
   btn.dataset.busy = '1';
@@ -1190,7 +1497,7 @@ async function hostPrivate() {
   readProfile();
   room = newRoom(); if (!room) return;
   await room.createPrivate();
-  setupHost(); enteredRoom();
+  setupHost(); enteredRoom(); saveHostNow();
   codeShown = false;
   history.replaceState(null, '', `?code=${room.code}`);
 }
@@ -1198,18 +1505,26 @@ async function joinCode(code) {
   code = String(code || '').trim().toUpperCase();
   if (!/^[A-Z]{4}$/.test(code)) { toast('Der Code hat 4 Buchstaben', { err: true }); return; }
   readProfile();
-  room = newRoom(); if (!room) return;
-  const ok = await room.joinPrivate(code, readProfile());
-  if (!ok) { room.leave(); room = null; toast('Lobby nicht gefunden 🤔', { err: true }); return; }
+  let ok = false;
+  for (let i = 0; i < 2 && !ok; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 1200));
+    room = newRoom(); if (!room) return;
+    ok = await room.joinPrivate(code, hello());
+    if (!ok) { room.leave(); room = null; }
+  }
+  if (!ok) { toast('Lobby nicht gefunden 🤔', { err: true }); return; }
+  lastHostMsg = Date.now();
   enteredRoom();
   history.replaceState(null, '', `?code=${code}`);
 }
 async function joinPub(n) {
   readProfile();
   room = newRoom(); if (!room) return false;
-  const ok = await room.joinPublic(n, readProfile());
+  const ok = await room.joinPublic(n, hello());
   if (!ok) { room.leave(); room = null; toast('Lobby nicht mehr da 🤔', { err: true }); return false; }
+  lastHostMsg = Date.now();
   enteredRoom();
+  history.replaceState(null, '', `?pub=${n}`);
   return true;
 }
 async function quickPlay() {
@@ -1220,7 +1535,7 @@ async function quickPlay() {
   for (const l of open) { if (await joinPub(l.slot)) return; }
   room = newRoom(); if (!room) return;
   await room.createPublic();
-  setupHost(); enteredRoom();
+  setupHost(); enteredRoom(); saveHostNow();
   toast('Neue öffentliche Lobby erstellt – warte auf Mitspieler!');
 }
 const modeName = (id) => (MODES.find((m) => m.id === id) || {}).name || '';
@@ -1289,7 +1604,29 @@ if (params.get('code')) {
   const n = +params.get('pub');
   if (n >= 1 && n <= 8) inviteJoin = () => joinPub(n);
 }
-if (inviteJoin) { show('invite'); }
+// Neu geladen? Host stellt seine Lobby wieder her, Mitspieler steigen automatisch wieder ein.
+const hostSave = loadHostSave();
+const clientSave = (() => { try { const x = JSON.parse(ssGet(CLIENT_KEY) || 'null'); return x && Date.now() - x.t < 3 * 60000 ? x : null; } catch (e) { return null; } })();
+const urlCode = (params.get('code') || '').toUpperCase();
+const isReload = (() => { try { return performance.getEntriesByType('navigation')[0].type === 'reload'; } catch (e) { return false; } })();
+if (hostSave && (hostSave.isPublic ? isReload : urlCode === hostSave.code)) {
+  inviteJoin = null;
+  (async () => {
+    const t = toast('🔄 Deine Lobby wird wiederhergestellt …', { ms: 60000 });
+    try {
+      room = newRoom(); if (!room) { t.close(); return; }
+      const ok = await claimHostId(room, hostSave.code, hostSave.isPublic);
+      t.close();
+      if (!ok) { room.leave(); room = null; ssSet(HOST_KEY, null); toast('Lobby konnte nicht wiederhergestellt werden 😕', { err: true, ms: 4500 }); return; }
+      setupHost(hostSave.H); enteredRoom();
+      if (!hostSave.isPublic) history.replaceState(null, '', `?code=${room.code}`);
+      toast('Lobby wiederhergestellt – alle können wieder rein!');
+    } catch (e) { t.close(); console.warn(e); room = null; ssSet(HOST_KEY, null); toast(errText(e), { err: true, ms: 4500 }); }
+  })();
+} else if (clientSave && inviteJoin && (clientSave.isPublic ? params.get('pub') : urlCode === clientSave.code)) {
+  show('invite');
+  busy($('inviteJoinBtn'), inviteJoin);
+} else if (inviteJoin) { show('invite'); }
 $('inviteJoinBtn').onclick = (e) => { sfx.play('click'); busy(e.currentTarget, inviteJoin || (async () => {})); };
 $('inviteBack').onclick = () => { history.replaceState(null, '', location.pathname); show('start'); };
 
@@ -1297,3 +1634,6 @@ window.addEventListener('beforeunload', (e) => {
   if (room && room.isHost && S && S.players.length > 1) { e.preventDefault(); e.returnValue = ''; }
 });
 document.querySelectorAll('.qm').forEach((q) => q.addEventListener('click', (e) => { e.preventDefault(); toast(q.title, { ms: 4000 }); }));
+
+// Test-/Fehlersuche-Hilfe (nur lesend): window.__machsMeme.state()
+window.__machsMeme = { state: () => ({ H, S, room: room && { id: room.myId, isHost: room.isHost, code: room.code } }) };

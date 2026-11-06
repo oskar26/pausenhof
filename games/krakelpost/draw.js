@@ -8,6 +8,8 @@ export const PALETTE = [
   '#0f7a6b', '#29c6e8', '#2456e8', '#8a5cff', '#d63ad8', '#ff8fc8',
 ];
 export const SIZES = [3, 6, 12, 22, 40];
+const SHAPES = ['line', 'rect', 'ellipse', 'rectf', 'ellipsef'];
+const hex2 = (n) => n.toString(16).padStart(2, '0');
 
 function loadImage(src) {
   return new Promise((res) => {
@@ -28,6 +30,7 @@ export class Board {
     this.underImage = null; // Image für Füll-Erkennung
     this.secret = false; this.locked = false;
     this.onChange = () => {};
+    this.onPick = () => {};
     this._bind();
   }
 
@@ -95,6 +98,7 @@ export class Board {
       const p = this._pos(e);
       this._cursor(e, true);
       if (this.tool === 'fill') { pid = null; this.snapshot(); this.fill(p.x, p.y); this.onChange(); return; }
+      if (this.tool === 'picker') { pid = null; this.onPick(this.pick(p.x, p.y)); return; }
       this.snapshot();
       start = p; pts = [p];
       if (this.tool === 'eraser') this._eraseSeg(p, p);
@@ -113,12 +117,12 @@ export class Board {
         pts.push(p);
       }
       if (this.tool === 'pen') this._drawLive(pts);
-      else if (['line', 'rect', 'ellipse'].includes(this.tool)) this._shapeLive(start, pts[pts.length - 1], e.shiftKey);
+      else if (SHAPES.includes(this.tool)) this._shapeLive(start, pts[pts.length - 1], e.shiftKey);
     };
     const up = (e) => {
       if (pid === null || e.pointerId !== pid) return;
       pid = null;
-      if (this.tool === 'pen' || ['line', 'rect', 'ellipse'].includes(this.tool)) {
+      if (this.tool === 'pen' || SHAPES.includes(this.tool)) {
         this.ctx.save(); this.ctx.globalAlpha = this.opacity; this.ctx.drawImage(this.el.live, 0, 0); this.ctx.restore();
         this.lctx.clearRect(0, 0, W, H);
       }
@@ -163,16 +167,29 @@ export class Board {
     const x = this.lctx; x.clearRect(0, 0, W, H); this._style(x);
     let w = b.x - a.x, h = b.y - a.y;
     if (square && this.tool !== 'line') { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
+    const t = this.tool, filled = t === 'rectf' || t === 'ellipsef';
     x.beginPath();
-    if (this.tool === 'line') { x.moveTo(a.x, a.y); x.lineTo(a.x + w, a.y + h); }
-    else if (this.tool === 'rect') x.rect(a.x, a.y, w, h);
+    if (t === 'line') { x.moveTo(a.x, a.y); x.lineTo(a.x + w, a.y + h); }
+    else if (t === 'rect' || t === 'rectf') x.rect(a.x, a.y, w, h);
     else x.ellipse(a.x + w / 2, a.y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
-    x.stroke();
+    if (filled) x.fill(); else x.stroke();
   }
   _eraseSeg(a, b) {
     const x = this.ctx; x.save(); x.globalCompositeOperation = 'destination-out';
     x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = this.size * 1.4;
     x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x + 0.01, b.y); x.stroke(); x.restore();
+  }
+
+  // Pipette: Farbe des sichtbaren Bildes (Vorlage + eigene Striche auf Weiß) an der Stelle
+  pick(fx, fy) {
+    const sx = Math.max(0, Math.min(W - 1, Math.floor(fx))), sy = Math.max(0, Math.min(H - 1, Math.floor(fy)));
+    const c = document.createElement('canvas'); c.width = 1; c.height = 1;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 1, 1);
+    if (this.underImage) x.drawImage(this.underImage, sx * this.underImage.naturalWidth / W, sy * this.underImage.naturalHeight / H, this.underImage.naturalWidth / W, this.underImage.naturalHeight / H, 0, 0, 1, 1);
+    x.drawImage(this.el.main, sx, sy, 1, 1, 0, 0, 1, 1);
+    const d = x.getImageData(0, 0, 1, 1).data;
+    return '#' + hex2(d[0]) + hex2(d[1]) + hex2(d[2]);
   }
 
   // Fülleimer: Grenzen aus Vorlage + eigenen Strichen, Farbe landet in der eigenen Ebene.

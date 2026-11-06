@@ -605,3 +605,16 @@ body.on-start .chat-fab { display: none; }
 @media (prefers-reduced-motion: reduce) { .rays, .blob, .blob span { animation: none; } }
 .step p, .faq p, .mode .md-d, .tgl-row .tg-d, .chat-log, .modal-card p, .site-foot span, .vc.meh .shrug { font-style: normal; }
 .chat-log .who { font-style: italic; }
+
+/* Verbindung weg (Spieler wartet auf Rückkehr) */
+.pl.off, .srow.off { opacity: .45; }
+/* GIF-Hinweis blendet sich aus, damit er keinen Text verdeckt */
+.meme .gif-badge { pointer-events: none; animation: mmBadgeOut .6s ease 2.6s forwards; }
+@keyframes mmBadgeOut { to { opacity: 0; visibility: hidden; } }
+
+/* Tipp-Modus am Handy (Tastatur offen): das Meme wird so klein, dass es mit allen Textfeldern über die Tastatur passt */
+body.mm-typing #scr-create .meme-box .meme { width: min(100%, calc(max(150px, var(--vvh, 60vh) - var(--hdr-h) - var(--rows, 2) * 58px - 44px) * var(--ar, 1))); }
+body.mm-typing #scr-create .tpl-name, body.mm-typing #scr-create .meme-actions, body.mm-typing .fab, body.mm-typing .fab-ico { display: none; }
+body.mm-typing #scr-create .create-grid { margin-top: 4px; }
+body.mm-typing #scr-create .input-panel { gap: 8px; }
+body.mm-typing #scr-create .box-inputs { gap: 8px; }
